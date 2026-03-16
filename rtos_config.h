@@ -41,7 +41,7 @@
 #define INTERVAL_BUTTON        10    // 按键扫描间隔 (10ms) - 响应及时
 #define INTERVAL_CLOCK         1000  // 时间更新间隔 (1秒)
 #define INTERVAL_SENSOR        1000  // 传感器读取间隔 (1秒)
-#define INTERVAL_BLE            5000 // BLE 数据发送间隔 (5秒)
+#define INTERVAL_BLE            1000 // BLE 数据发送间隔 (1秒)
 
 // ==================== 任务句柄 (用于任务管理) ====================
 extern TaskHandle_t xButtonTaskHandle;
