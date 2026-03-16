@@ -60,14 +60,21 @@ SensorReading lastReading;
 // ==================== 回调类 ====================
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
-        Serial.printf("Found device: %s\n", advertisedDevice.getName().c_str());
-        if (advertisedDevice.getName() == TARGET_DEVICE_NAME) {
-            Serial.println("✅ Found target device: " + String(TARGET_DEVICE_NAME));
-            foundTarget = true;
-            // 保存设备地址
-            targetDevice = new BLEAdvertisedDevice(advertisedDevice);
-            // 停止扫描
-            BLEDevice::getScan()->stop();
+        String name = "";
+        if (advertisedDevice.haveName()) {
+            name = advertisedDevice.getName().c_str();
+            Serial.printf("Found device: %s\n", name.c_str());
+            // 只要名称包含目标名称就算找到（容忍空格/后缀差异）
+            if (name.indexOf(TARGET_DEVICE_NAME) >= 0) {
+                Serial.println("✅ Found target device: " + name);
+                foundTarget = true;
+                // 保存设备地址
+                targetDevice = new BLEAdvertisedDevice(advertisedDevice);
+                // 停止扫描
+                BLEDevice::getScan()->stop();
+            }
+        } else {
+            Serial.println("Found device: (no name)");
         }
     }
 };
