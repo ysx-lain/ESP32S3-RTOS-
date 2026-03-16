@@ -1,6 +1,6 @@
 /**
- * @file main.ino
- * @brief 主程序：集成屏幕驱动、系统时钟、BLE通讯、页面管理、按键控制、自动息屏
+ * @file ESP32S3-RTOS.ino
+ * @brief 主程序：FreeRTOS 多任务版本
  * 
  * 硬件接线：
  *   - 屏幕：sclk=13, data=11, cd=9, cs=10, reset=8
@@ -8,22 +8,31 @@
  *   - 按键：GPIO2（接 GND，内部上拉）
  * 
  * 功能：
- *   - 按键切换页面（传感器页 / 运行时间页）
- *   - 运行时间页每分钟更新一次（分钟变化时才刷新屏幕）
+ *   - FreeRTOS 多任务架构，每个功能模块一个独立任务
+ *   - 按键扫描任务 → 事件队列 → 显示任务
+ *   - 传感器读取任务 → 数据队列 → 显示任务 + BLE 任务
+ *   - 时间更新任务 → 每分钟刷新显示
  *   - 10秒无操作自动息屏，按键唤醒
- *   - 唤醒或切换页面时先清屏，确保无内容重叠
- *   - 可选 BLE 广播（默认注释，可取消注释启用）
+ *   - 可选 BLE 通信
  * 
+ * 任务划分：
+ *   1. button_task  - 按键扫描，优先级 1
+ *   2. clock_task   - 时间更新，优先级 1
+ *   3. sensor_task  - 传感器读取，优先级 2
+ *   4. display_task - 显示更新，优先级 2
+ *   5. ble_task     - BLE 通信，优先级 3 (可选)
+ *
  * @author ysx
- * @date 2024-03-02
- * @version 3.3
+ * @date 2024-03-16
+ * @version 4.0 (FreeRTOS 版本)
  */
 
 #include <SPI.h>
-#include "Ucglib.h"
+#include <Ucglib.h>
 #include "Display.h"
-#include "clock.h"      // 系统时钟（可选，这里暂不使用其 ticks，改用 millis）
-// #include "ble.h"      // BLE 模块（如需启用，取消注释并安装标准BLE库）
+#include "clock.h"
+#include "rtos_config.h"
+// #include "ble.h"      // BLE 模块（如需启用，取消注释并在 rtos_config.cpp 中启用 BLE 任务创建）
 
 // ==================== 硬件引脚定义 ====================
 #define BUTTON_PIN 2
@@ -65,60 +74,29 @@ void refreshTimeDisplay() {
     display.drawText(10, baselineY, buffer, FONT_MEDIUM_SIZE, 255, 255, 255);
 }
 
-// 每分钟更新一次（分钟变化才刷新）
-void updateTime() {
-    if (currentPage != 1) return;      // 只在运行时页面更新
-
-    static int lastMinute = -1;        // 记录上一次显示的分钟值
-
-    unsigned long seconds = millis() / 1000;
-    unsigned long minutes = seconds / 60;
-    int currentMinute = minutes % 60;
-
-    // 如果分钟没有变化，则不刷新屏幕（节省资源）
-    if (currentMinute == lastMinute) {
-        return;
-    }
-    lastMinute = currentMinute;
-
-    // 分钟已变化，刷新显示
-    refreshTimeDisplay();
-}
-
-// ==================== 按键处理 ====================
-void checkButton() {
-    static int lastButtonState = HIGH;
-    int buttonState = digitalRead(BUTTON_PIN);
-    if (buttonState == LOW && lastButtonState == HIGH && millis() - lastButtonPress > debounceTime) {
-        lastButtonPress = millis();
-        bool wasScreenOff = !display.isScreenOn();
-        display.updateActivity();
-
-        if (wasScreenOff) {
-            // 屏幕原来是关的：唤醒并重绘当前页面（先清屏，避免重叠）
-            display.clear();
-            pages[currentPage]();
-            Serial.println("Screen woken up");
-        } else {
-            // 屏幕亮着：切换页面（先清屏，避免重叠）
-            currentPage = (currentPage + 1) % PAGE_COUNT;
-            Serial.print("Switched to page: ");
-            Serial.println(currentPage);
-            display.clear();
-            pages[currentPage]();
-        }
-    }
-    lastButtonState = buttonState;
-}
-
 // ==================== 页面函数 ====================
 void page1() {
-    // 传感器页面：直接绘制5行数据（整个屏幕会被覆盖）
+    // 从传感器队列获取最新数据显示
+    // 这里先保留原来的静态显示，实际使用时你可以修改成从队列读取
     display.Sensor(3, "Temp", 25.5, "C");
     display.Sensor(4, "Hum",  60,   "%");
     display.Sensor(5, "Count", 100, NULL);
     display.Sensor(6, "Press", 1013.25, "hPa");
     display.Sensor(7, "CO2",   400,  "ppm");
+
+    // 如果你想显示最新读取的传感器数据，可以这样做：
+    /*
+    SensorReading_t reading;
+    // 非阻塞读取最新数据
+    while (xQueueReceive(xSensorDataQueue, &reading, 0)) {
+        // 保留最新数据
+    }
+    display.Sensor(3, "Temp", reading.temperature, "C");
+    display.Sensor(4, "Hum",  reading.humidity,   "%");
+    display.Sensor(5, "Count", reading.count, NULL);
+    display.Sensor(6, "Press", reading.pressure, "hPa");
+    display.Sensor(7, "CO2",   reading.co2,  "ppm");
+    */
 }
 
 void page2() {
@@ -140,8 +118,9 @@ void onBLECommand(const String& cmd) {
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("System starting...");
+    Serial.println("=== ESP32-S3 RTOS SmartWatch starting ===");
 
+    // 硬件引脚初始化
     pinMode(BUTTON_PIN, INPUT_PULLUP);
 
     // 初始化屏幕
@@ -149,8 +128,6 @@ void setup() {
         Serial.println("Display init failed!");
         while (1);
     }
-    // 移除开机动画，直接显示默认页面
-    // display.bootAnimation();   // 已注释，去掉加载界面
     Serial.println("Display ready");
 
     // 初始化系统时钟（可选，暂不使用其 ticks）
@@ -160,42 +137,16 @@ void setup() {
     // BLEManager::begin("ESP32-S3_Sensor");
     // BLEManager::onReceiveData(onBLECommand);
 
-    // 显示默认页面（页面0，传感器页）
-    display.clear();           // 确保屏幕干净
-    pages[currentPage]();
+    // 初始化 FreeRTOS：创建互斥锁、队列、所有任务
+    rtos_init();
 
-    Serial.println("System ready");
+    Serial.println("=== System ready (FreeRTOS multi-task mode) ===");
 }
 
 // ==================== 主循环 ====================
+// 在 Arduino-ESP32 中，loop() 本身也是一个 FreeRTOS 任务
+// 这里我们不需要做任何事，所有工作都在各个任务中完成
 void loop() {
-    // 按键检测（唤醒/切换）
-    checkButton();
-
-    // 自动息屏检测（10秒无操作息屏）
-    display.checkSleep(10000);
-
-    // 维护 BLE 状态（如需启用）
-    // BLEManager::update();
-
-    // 每分钟更新运行时间（基于 millis() 轮询）
-    static unsigned long lastTimeCheck = 0;
-    if (millis() - lastTimeCheck >= 1000) {   // 每秒检查一次
-        lastTimeCheck = millis();
-        updateTime();                         // 内部判断分钟是否变化
-    }
-
-    // 可选的 BLE 数据发送示例（每5秒发送一次）
-    /*
-    static unsigned long lastBLESend = 0;
-    if (BLEManager::isConnected() && millis() - lastBLESend >= 5000) {
-        lastBLESend = millis();
-        String data = "T:25.5,H:60";
-        BLEManager::sendSensorData(data);
-        Serial.println("BLE data sent");
-    }
-    */
-
-    // 短暂延时，避免 WDT 触发
-    delay(10);
+    // 无事可做，睡眠让出CPU
+    vTaskDelay(pdMS_TO_TICKS(1000));
 }
