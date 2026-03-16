@@ -146,7 +146,7 @@ bool connectToServer() {
         Serial.println("🔍 Scanning for target device...");
         foundTarget = false;
         pBLEScan->clearResults();
-        pBLEScan->start(5, false); // 扫描 5 秒
+        pBLEScan->start(10, false); // 扫描 10 秒，更容易找到设备
         return false; // 扫描完会找到设备，下次循环连接
     }
 
@@ -216,9 +216,10 @@ void setup() {
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);
     pBLEScan->setActiveScan(true);
+    pBLEScan->start(10); // 扫描 10 秒，更容易找到设备
     ::pBLEScan = pBLEScan; // 保存全局指针
 
-    Serial.println("🔍 Starting scan...");
+    Serial.println("🔍 Starting scan (10 seconds)...");
 }
 
 // ==================== 主循环 ====================
