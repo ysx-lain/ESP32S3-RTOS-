@@ -94,4 +94,8 @@ void ble_task(void *pvParameters);
 #define BL_PIN     12
 #endif
 
+// ==================== 常量定义 ====================
+// 按键消抖时间（毫秒）
+extern const unsigned long debounceTime;
+
 #endif // RTOS_CONFIG_H
