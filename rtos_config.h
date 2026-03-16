@@ -85,4 +85,13 @@ void sensor_task(void *pvParameters);
 void display_task(void *pvParameters);
 void ble_task(void *pvParameters);
 
+// ==================== 硬件引脚定义 ====================
+// 如果主程序没有定义，这里提供默认定义
+#ifndef BUTTON_PIN
+#define BUTTON_PIN 2
+#endif
+#ifndef BL_PIN
+#define BL_PIN     12
+#endif
+
 #endif // RTOS_CONFIG_H
