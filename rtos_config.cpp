@@ -40,6 +40,7 @@ extern void page2();
 extern void refreshTimeDisplay();
 extern unsigned long lastButtonPress;
 extern const unsigned long debounceTime;
+// 引脚定义已经在 rtos_config.h 中提供
 
 // ==================== 按键扫描任务 ====================
 void button_task(void *pvParameters) {
@@ -205,20 +206,21 @@ void ble_task(void *pvParameters) {
         // 检查是否有新的传感器数据
         if (BLEManager::isConnected()) {
             // 尝试从队列读取最新的传感器数据（非阻塞）
+            // 持续读取直到队列为空，保留最新的一个
             while (xQueueReceive(xSensorDataQueue, &lastReading, 0)) {
-                // 读取到最新数据，继续读直到队列为空（保留最新的）
+                // 循环读取，最后一个就是最新的
             }
 
-            // 发送数据到 BLE 客户端
+            // 发送数据到 BLE 客户端（二进制格式，带时间戳）
+            // 这样从机可以直接解析结构体，保证数据同步
             if (lastReading.timestamp > 0) {
-                char buffer[64];
-                snprintf(buffer, sizeof(buffer), "T:%.1f,H:%.1f,P:%.2f,C:%d",
-                         lastReading.temperature,
-                         lastReading.humidity,
-                         lastReading.pressure,
-                         lastReading.co2);
-                BLEManager::sendSensorData(buffer);
-                Serial.println("BLE data sent: " + String(buffer));
+                // 更新时间戳为当前发送时间
+                lastReading.timestamp = millis();
+                BLEManager::sendSensorData((uint8_t*)&lastReading, sizeof(lastReading));
+                Serial.printf("BLE: Sent sensor data, temp=%.1f hum=%.1f timestamp=%lu\n",
+                           lastReading.temperature,
+                           lastReading.humidity,
+                           lastReading.timestamp);
             }
         } else {
             // 断开连接时，让 BLE 栈做维护工作
