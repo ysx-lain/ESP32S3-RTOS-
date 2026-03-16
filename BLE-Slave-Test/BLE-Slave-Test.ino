@@ -32,6 +32,11 @@ BLERemoteCharacteristic* pRemoteCharacteristic = nullptr;
 bool deviceConnected = false;
 bool gotData = false;
 
+// 保存找到的目标设备
+BLEScan* pBLEScan;
+BLEAdvertisedDevice* targetDevice = nullptr;
+bool foundTarget = false;
+
 // 统计信息
 unsigned long totalPackets = 0;
 unsigned long totalErrors = 0;
@@ -57,9 +62,12 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
         Serial.printf("Found device: %s\n", advertisedDevice.getName().c_str());
         if (advertisedDevice.getName() == TARGET_DEVICE_NAME) {
-            Serial.println("Found target device, connecting...");
+            Serial.println("✅ Found target device: " + String(TARGET_DEVICE_NAME));
+            foundTarget = true;
+            // 保存设备地址
+            targetDevice = new BLEAdvertisedDevice(advertisedDevice);
+            // 停止扫描
             BLEDevice::getScan()->stop();
-            advertisedDevice.getScan()->stop();
         }
     }
 };
@@ -72,6 +80,8 @@ class MyClientCallback : public BLEClientCallbacks {
 
     void onDisconnect(BLEClient* pclient) {
         deviceConnected = false;
+        foundTarget = false;
+        targetDevice = nullptr;
         Serial.println("*** Disconnected from master device ***");
         pClient = nullptr;
     }
@@ -85,7 +95,7 @@ static void notifyCallback(
   bool isNotify) {
 
     if (length != sizeof(SensorReading)) {
-        Serial.printf("Error: wrong data length %d, expected %d\n", 
+        Serial.printf("❌ Error: wrong data length %d, expected %d\n", 
                    (int)length, (int)sizeof(SensorReading));
         totalErrors++;
         return;
@@ -132,28 +142,60 @@ static void notifyCallback(
 
 // ==================== 连接函数 ====================
 bool connectToServer() {
-    BLEScan* pBLEScan = BLEDevice::getScan();
-    pBLEScan->setActiveScan(true);
-    pBLEScan->start(5, false); // 扫描 5 秒
+    if (!foundTarget || targetDevice == nullptr) {
+        Serial.println("🔍 Scanning for target device...");
+        foundTarget = false;
+        pBLEScan->clearResults();
+        pBLEScan->start(5, false); // 扫描 5 秒
+        return false; // 扫描完会找到设备，下次循环连接
+    }
 
-    // 这里简化，实际需要找到设备后连接
-    // 为了测试，我们直接尝试连接已知名称
-    BLEAdvertisedDevice* dev = nullptr;
-    // ... 扫描找到设备后 ...
+    // 已经找到目标设备，开始连接
+    Serial.println("🔗 Connecting to " + String(TARGET_DEVICE_NAME) + "...");
 
     // 创建客户端
     pClient = BLEDevice::createClient();
     pClient->setClientCallbacks(new MyClientCallback());
 
-    // 这里需要根据实际扫描结果获取地址
-    // 简化版本：如果你知道地址可以直接写
-    // 这里我们假设扫描找到了设备，你可以根据实际情况修改 MAC 地址
+    // 连接到设备
+    if (!pClient->connect(targetDevice)) {
+        Serial.println("❌ Connection failed");
+        delete targetDevice;
+        targetDevice = nullptr;
+        foundTarget = false;
+        return false;
+    }
 
-    Serial.println("Connecting...");
-    // 如果连接失败，这里会返回
-    // 你需要根据实际扫描结果修改
+    // 找到服务和特征
+    Serial.println("🔍 Looking for service...");
+    BLERemoteService* pRemoteService = pClient->getService(SERVICE_UUID);
+    if (pRemoteService == nullptr) {
+        Serial.println("❌ Can't find our service");
+        pClient->disconnect();
+        delete targetDevice;
+        targetDevice = nullptr;
+        foundTarget = false;
+        return false;
+    }
 
-    return deviceConnected;
+    Serial.println("🔍 Looking for characteristic...");
+    pRemoteCharacteristic = pRemoteService->getCharacteristic(CHARACTERISTIC_UUID);
+    if (pRemoteCharacteristic == nullptr) {
+        Serial.println("❌ Can't find our characteristic");
+        pClient->disconnect();
+        delete targetDevice;
+        targetDevice = nullptr;
+        foundTarget = false;
+        return false;
+    }
+
+    // 注册通知
+    if (pRemoteCharacteristic->canNotify()) {
+        pRemoteCharacteristic->registerForNotify(notifyCallback);
+        Serial.println("✅ Registered for notifications");
+    }
+
+    return true;
 }
 
 // ==================== 初始化 ====================
@@ -174,9 +216,9 @@ void setup() {
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);
     pBLEScan->setActiveScan(true);
-    pBLEScan->start(5);
+    ::pBLEScan = pBLEScan; // 保存全局指针
 
-    Serial.println("Scanning...");
+    Serial.println("🔍 Starting scan...");
 }
 
 // ==================== 主循环 ====================
@@ -185,29 +227,19 @@ void setup() {
 void loop() {
     if (!deviceConnected) {
         // 未连接，尝试重连
-        Serial.println("Not connected, retrying...");
-        if (connectToServer()) {
-            Serial.println("Connected!");
-            // 找到特征，注册通知
-            BLERemoteService* pRemoteService = pClient->getService(SERVICE_UUID);
-            if (pRemoteService != nullptr) {
-                pRemoteCharacteristic = pRemoteService->getCharacteristic(CHARACTERISTIC_UUID);
-                if (pRemoteCharacteristic != nullptr) {
-                    if (pRemoteCharacteristic->canNotify()) {
-                        pRemoteCharacteristic->registerForNotify(notifyCallback);
-                        Serial.println("Registered for notifications");
-                    }
-                }
+        if (!connectToServer()) {
+            if (!foundTarget) {
+                Serial.println("❌ Target not found, retrying in 5 seconds");
             }
-        } else {
-            Serial.println("Connection failed, retrying in 5 seconds");
             delay(5000);
+        } else {
+            Serial.println("✅ Connected successfully! Waiting for data...");
         }
     } else {
         // 已连接，检查连接状态
-        if (!pClient->isConnected()) {
+        if (pClient != nullptr && !pClient->isConnected()) {
             deviceConnected = false;
-            Serial.println("Connection lost");
+            Serial.println("❌ Connection lost");
         }
     }
 
