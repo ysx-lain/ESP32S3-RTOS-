@@ -32,7 +32,7 @@
 #include "Display.h"
 #include "clock.h"
 #include "rtos_config.h"
-// #include "ble.h"      // BLE 模块（如需启用，取消注释并在 rtos_config.cpp 中启用 BLE 任务创建）
+#include "ble.h"      // BLE 模块已启用
 
 // ==================== 硬件引脚定义 ====================
 #define BUTTON_PIN 2
@@ -133,8 +133,8 @@ void setup() {
     // 初始化系统时钟（可选，暂不使用其 ticks）
     // SystemClock::begin();
 
-    // 初始化 BLE（如需启用，取消注释）
-    // BLEManager::begin("ESP32-S3_Sensor");
+    // 初始化 BLE（已启用）
+    BLEManager::begin("ESP32-S3_Sensor");
     // BLEManager::onReceiveData(onBLECommand);
 
     // 初始化 FreeRTOS：创建互斥锁、队列、所有任务

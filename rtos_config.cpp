@@ -260,9 +260,9 @@ void rtos_init(void) {
     xTaskCreatePinnedToCore(display_task, "Display", TASK_STACK_DISPLAY, nullptr,
                             TASK_PRIORITY_DISPLAY, &xDisplayTaskHandle, 1);
 
-    // BLE 任务默认不创建，需要时取消注释
-    // xTaskCreatePinnedToCore(ble_task, "BLE", TASK_STACK_BLE, nullptr,
-    //                         TASK_PRIORITY_BLE, &xBLETaskHandle, 1);
+    // BLE 任务默认启用
+    xTaskCreatePinnedToCore(ble_task, "BLE", TASK_STACK_BLE, nullptr,
+                            TASK_PRIORITY_BLE, &xBLETaskHandle, 1);
 
     Serial.println("All FreeRTOS tasks created");
 }
