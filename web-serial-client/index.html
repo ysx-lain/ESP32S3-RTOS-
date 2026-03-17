@@ -59,7 +59,7 @@
             min-width: 200px;
         }
         .status {
-            padding: 10px;
+            padding: 10px 15px;
             border-radius: 4px;
             font-weight: bold;
         }
@@ -107,7 +107,6 @@
             font-size: 12px;
             white-space: pre-wrap;
         }
-
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -125,15 +124,6 @@
             font-weight: bold;
             color: #28a745;
         }
-        .chart-container {
-            width: 100%;
-            height: 300px;
-            margin-top: 15px;
-        }
-        canvas {
-            width: 100% !important;
-            height: 100% !important;
-        }
     </style>
 </head>
 <body>
@@ -141,8 +131,8 @@
 
     <div class="card">
         <div class="controls">
-            <select id="portSelect"></select>
-            <button id="connectBtn">连接</button>
+            <button id="requestPortBtn">选择串口</button>
+            <button id="connectBtn" disabled>连接</button>
             <button id="disconnectBtn" disabled>断开</button>
             <span id="status" class="status disconnected">未连接</span>
         </div>
@@ -226,84 +216,23 @@
         let totalPackets = 0;
         let errorPackets = 0;
         let startTime = null;
-        let expectedStructSize = 24; // sizeof(SensorReading) = 4*6 = 24 bytes
+        const expectedStructSize = 24; // sizeof(SensorReading) = 4*6 = 24 bytes
 
-        // 刷新端口列表
-        async function refreshPorts() {
-            const ports = await navigator.serial.getPorts();
-            const select = document.getElementById('portSelect');
-            select.innerHTML = '';
-            if (ports.length === 0) {
-                select.innerHTML = '<option value="">没有找到端口</option>';
-                return;
-            }
-            ports.forEach(p => {
-                const option = document.createElement('option');
-                option.value = p;
-                option.textContent = p.getInfo().usbVendorId ? 
-                    `USB ${p.getInfo().usbVendorId.toString(16)}:${p.getInfo().usbProductId.toString(16)}` : 
-                    'Serial Port';
-                select.appendChild(option);
-            });
+        // 添加日志
+        function addLog(msg) {
+            const log = document.getElementById('log');
+            log.textContent += msg + '\n';
+            log.scrollTop = log.scrollHeight;
         }
 
-        // 连接端口
-        async function connect() {
-            try {
-                const select = document.getElementById('portSelect');
-                if (!select.selectedIndex || select.options[select.selectedIndex].value == "") {
-                    alert('请选择一个端口');
-                    return;
-                }
-
-                port = select.options[select.selectedIndex].value;
-                await port.open({ baudRate: 115200 });
-                connected = true;
-                startTime = Date.now();
-
-                document.getElementById('connectBtn').disabled = true;
-                document.getElementById('disconnectBtn').disabled = false;
-                document.getElementById('status').textContent = '已连接';
-                document.getElementById('status').classList.remove('disconnected');
-                document.getElementById('status').classList.add('connected');
-
-                addLog('✅ 已连接，开始接收数据...');
-
-                // 读取数据
-                reader = port.readable.getReader();
-                let buffer = new Uint8Array(0);
-
-                while (port.readable) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-
-                    // 拼接缓冲区
-                    const newBuffer = new Uint8Array(buffer.length + value.length);
-                    newBuffer.set(buffer, 0);
-                    newBuffer.set(value, buffer.length);
-                    buffer = newBuffer;
-
-                    // 尝试解析完整数据包
-                    while (buffer.length >= expectedStructSize) {
-                        const packet = buffer.slice(0, expectedStructSize);
-                        buffer = buffer.slice(expectedStructSize);
-
-                        try {
-                            const reading = SensorReading.fromBytes(packet);
-                            handleReading(reading);
-                        } catch (e) {
-                            errorPackets++;
-                            addLog(`❌ 解析错误: ${e.message}`);
-                            updateStats();
-                        }
-                    }
-                }
-
-                // 读取结束
-                disconnect();
-            } catch (e) {
-                addLog(`❌ 连接错误: ${e.message}`);
-                disconnect();
+        // 更新统计
+        function updateStats() {
+            document.getElementById('totalPackets').textContent = totalPackets;
+            document.getElementById('errorPackets').textContent = errorPackets;
+            if (startTime) {
+                const elapsed = (Date.now() - startTime) / 1000;
+                const pps = (totalPackets / elapsed).toFixed(1);
+                document.getElementById('pps').textContent = pps;
             }
         }
 
@@ -324,34 +253,97 @@
             updateStats();
         }
 
-        function updateStats() {
-            document.getElementById('totalPackets').textContent = totalPackets;
-            document.getElementById('errorPackets').textContent = errorPackets;
-            if (startTime) {
-                const elapsed = (Date.now() - startTime) / 1000;
-                const pps = (totalPackets / elapsed).toFixed(1);
-                document.getElementById('pps').textContent = pps;
+        // 请求用户选择串口
+        async function requestPort() {
+            try {
+                port = await navigator.serial.requestPort();
+                addLog(`✅ 已选择端口`);
+                document.getElementById('connectBtn').disabled = false;
+            } catch (e) {
+                console.error(e);
+                alert(`选择端口失败: ${e.message}`);
             }
         }
 
-        function addLog(msg) {
-            const log = document.getElementById('log');
-            log.textContent += msg + '\n';
-            log.scrollTop = log.scrollHeight;
+        // 连接串口
+        async function connect() {
+            try {
+                if (!port) {
+                    alert('请先选择端口');
+                    return;
+                }
+
+                await port.open({ baudRate: 115200 });
+                connected = true;
+                startTime = Date.now();
+                totalPackets = 0;
+                errorPackets = 0;
+
+                document.getElementById('requestPortBtn').disabled = true;
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('disconnectBtn').disabled = false;
+                document.getElementById('status').textContent = '已连接';
+                document.getElementById('status').classList.remove('disconnected');
+                document.getElementById('status').classList.add('connected');
+
+                addLog('✅ 已连接，开始接收数据...');
+
+                // 开始读取循环
+                reader = port.readable.getReader();
+                let buffer = new Uint8Array(0);
+
+                try {
+                    while (connected && port.readable) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+
+                        // 拼接缓冲区
+                        const newBuffer = new Uint8Array(buffer.length + value.length);
+                        newBuffer.set(buffer, 0);
+                        newBuffer.set(value, buffer.length);
+                        buffer = newBuffer;
+
+                        // 尝试解析完整数据包
+                        while (buffer.length >= expectedStructSize) {
+                            const packet = buffer.slice(0, expectedStructSize);
+                            buffer = buffer.slice(expectedStructSize);
+
+                            try {
+                                // 把 Uint8Array 转成 ArrayBuffer 给 DataView
+                                const dataView = new DataView(packet.buffer);
+                                const reading = SensorReading.fromBytes(dataView);
+                                handleReading(reading);
+                            } catch (e) {
+                                errorPackets++;
+                                addLog(`❌ 解析错误: ${e.message}`);
+                                updateStats();
+                            }
+                        }
+                    }
+                } catch (e) {
+                    addLog(`❌ 读取错误: ${e.message}`);
+                } finally {
+                    disconnect();
+                }
+            } catch (e) {
+                addLog(`❌ 连接错误: ${e.message}`);
+                disconnect();
+            }
         }
 
         // 断开连接
-        async function disconnect() {
+        function disconnect() {
             if (reader) {
-                await reader.cancel();
+                reader.cancel();
                 reader = null;
             }
             if (port) {
-                await port.close();
+                port.close();
                 port = null;
             }
             connected = false;
-            document.getElementById('connectBtn').disabled = false;
+            document.getElementById('requestPortBtn').disabled = false;
+            document.getElementById('connectBtn').disabled = true;
             document.getElementById('disconnectBtn').disabled = true;
             document.getElementById('status').textContent = '未连接';
             document.getElementById('status').classList.remove('connected');
@@ -359,49 +351,18 @@
             addLog('🔌 已断开连接');
         }
 
-        // 请求用户选择串口，这是浏览器安全要求必须用户点击
-        async function requestPort() {
-            try {
-                const selectedPort = await navigator.serial.requestPort();
-                await refreshPorts();
-                // 选中用户刚选的端口
-                const select = document.getElementById('portSelect');
-                for (let i = 0; i < select.options.length; i++) {
-                    if (select.options[i].value === selectedPort) {
-                        select.selectedIndex = i;
-                        break;
-                    }
-                }
-                addLog('✅ 已选择端口');
-            } catch (e) {
-                console.error(e);
-                alert('选择端口失败: ' + e.message);
-            }
-        }
-
-        // 初始化
+        // 检查支持
         document.addEventListener('DOMContentLoaded', () => {
-            // 检查 Web Serial API 是否支持
             if (!navigator.serial) {
                 alert('你的浏览器不支持 Web Serial API！请使用 Chrome/Edge 新版本。');
-                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('requestPortBtn').disabled = true;
                 return;
             }
 
-            refreshPorts();
+            // 绑定事件
+            document.getElementById('requestPortBtn').addEventListener('click', requestPort);
             document.getElementById('connectBtn').addEventListener('click', connect);
             document.getElementById('disconnectBtn').addEventListener('click', disconnect);
-
-            // 添加手动选择端口按钮
-            const btnRefresh = document.createElement('button');
-            btnRefresh.textContent = '刷新端口';
-            btnRefresh.addEventListener('click', refreshPorts);
-            document.querySelector('.controls').appendChild(btnRefresh);
-
-            const btnSelect = document.createElement('button');
-            btnSelect.textContent = '选择端口';
-            btnSelect.addEventListener('click', requestPort);
-            document.querySelector('.controls').appendChild(btnSelect);
         });
     </script>
 </body>
