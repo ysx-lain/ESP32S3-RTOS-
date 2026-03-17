@@ -61,8 +61,7 @@ SensorReading lastReading;
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
         if (advertisedDevice.haveName()) {
-            std::string nameStr = advertisedDevice.getName();
-            String name = nameStr.c_str();
+            String name = advertisedDevice.getName().c_str();
             Serial.printf("Found device: %s\n", name.c_str());
             // 只要名称包含目标名称就算找到（容忍空格/后缀差异）
             if (name.indexOf(TARGET_DEVICE_NAME) >= 0) {
@@ -76,7 +75,7 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
         } else {
             // 即使没有名称，也检查服务 UUID
             Serial.printf("Found device: (no name), address: %s\n", advertisedDevice.getAddress().toString().c_str());
-            if (advertisedDevice.isAdvertisingService(NimBLEUUID(SERVICE_UUID))) {
+            if (advertisedDevice.isAdvertisingService(BLEUUID(SERVICE_UUID))) {
                 Serial.println("✅ Found target by service UUID!");
                 foundTarget = true;
                 targetDevice = new BLEAdvertisedDevice(advertisedDevice);
