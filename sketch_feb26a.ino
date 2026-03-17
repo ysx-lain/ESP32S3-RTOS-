@@ -77,26 +77,18 @@ void refreshTimeDisplay() {
 // ==================== 页面函数 ====================
 void page1() {
     // 从传感器队列获取最新数据显示
-    // 这里先保留原来的静态显示, 实际使用时你可以修改成从队列读取
-    display.Sensor(3, "Temp", 25.5, "C");
-    display.Sensor(4, "Hum",  60,   "%");
-    display.Sensor(5, "Count", 100, NULL);
-    display.Sensor(6, "Press", 1013.25, "hPa");
-    display.Sensor(7, "CO2",   400,  "ppm");
-
-    // 如果你想显示最新读取的传感器数据, 可以这样做:
-    /*
     SensorReading_t reading;
-    // 非阻塞读取最新数据
+    // 非阻塞读取最新数据, 持续读取直到队列为空, 保留最后一个(最新的)
     while (xQueueReceive(xSensorDataQueue, &reading, 0)) {
-        // 保留最新数据
+        // 循环读取, 最后一个就是最新数据
     }
+    
+    // 显示最新读取的传感器数据
     display.Sensor(3, "Temp", reading.temperature, "C");
     display.Sensor(4, "Hum",  reading.humidity,   "%");
     display.Sensor(5, "Count", reading.count, NULL);
     display.Sensor(6, "Press", reading.pressure, "hPa");
     display.Sensor(7, "CO2",   reading.co2,  "ppm");
-    */
 }
 
 void page2() {

@@ -110,15 +110,45 @@ void clock_task(void *pvParameters) {
 
 // ==================== 传感器读取任务 ====================
 void sensor_task(void *pvParameters) {
+    static float base_temp = 25.0f;
+    static float base_hum = 50.0f;
+    static float base_press = 1013.0f;
+    static int base_co2 = 400;
+    static int counter = 0;
+
     for (;;) {
-        // 这里你可以填写实际的传感器读取代码
-        // 示例数据, 实际应用中替换成你的传感器读取
+        // 模拟生成传感器数据，每次随机微小变化
         SensorReading_t reading;
-        reading.temperature = 25.5 + (rand() % 100) / 100.0;
-        reading.humidity = 60.0 + (rand() % 200) / 10.0;
-        reading.count = 100 + (millis() / 1000) / 60;
-        reading.pressure = 1013.25 + (rand() % 100) / 10.0;
-        reading.co2 = 400 + rand() % 50;
+        
+        // 温度：20-35 度之间随机游走
+        base_temp += ((rand() % 100) - 50) / 100.0f;
+        if (base_temp < 20) base_temp = 20;
+        if (base_temp > 35) base_temp = 35;
+        reading.temperature = base_temp;
+        
+        // 湿度：30-80 %RH 之间随机游走
+        base_hum += ((rand() % 100) - 50) / 10.0f;
+        if (base_hum < 30) base_hum = 30;
+        if (base_hum > 80) base_hum = 80;
+        reading.humidity = base_hum;
+        
+        // 气压：980-1040 hPa 之间随机游走
+        base_press += ((rand() % 100) - 50) / 10.0f;
+        if (base_press < 980) base_press = 980;
+        if (base_press > 1040) base_press = 1040;
+        reading.pressure = base_press;
+        
+        // CO2：400-2000 ppm 之间随机游走
+        base_co2 += (rand() % 21) - 10;
+        if (base_co2 < 400) base_co2 = 400;
+        if (base_co2 > 2000) base_co2 = 2000;
+        reading.co2 = base_co2;
+        
+        // 计数器递增
+        counter++;
+        reading.count = counter;
+        
+        // 时间戳
         reading.timestamp = millis();
 
         // 将读取的数据发送到队列, 供显示任务和 BLE 任务使用
