@@ -243,6 +243,7 @@ void ble_task(void *pvParameters) {
     // BLE 已经在 setup 中初始化, 这里只需要定期发送数据
     SensorReading_t lastReading;
     memset(&lastReading, 0, sizeof(lastReading));
+    bool hasReceivedData = false;
 
     for (;;) {
         // 检查是否有新的传感器数据
@@ -251,11 +252,12 @@ void ble_task(void *pvParameters) {
             // 持续读取直到队列为空, 保留最新的一个
             while (xQueueReceive(xSensorDataQueue, &lastReading, 0)) {
                 // 循环读取, 最后一个就是最新的
+                hasReceivedData = true;
             }
 
             // 发送数据到 BLE 客户端(二进制格式, 带时间戳)
             // 这样从机可以直接解析结构体, 保证数据同步
-            if (lastReading.timestamp > 0) {
+            if (hasReceivedData) {
                 // 更新时间戳为当前发送时间
                 lastReading.timestamp = millis();
                 BLEManager::sendSensorData((uint8_t*)&lastReading, sizeof(lastReading));
@@ -267,6 +269,7 @@ void ble_task(void *pvParameters) {
         } else {
             // 断开连接时, 让 BLE 栈做维护工作
             BLEManager::update();
+            hasReceivedData = false;
         }
 
         vTaskDelay(pdMS_TO_TICKS(INTERVAL_BLE));
