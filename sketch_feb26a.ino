@@ -42,7 +42,7 @@
 Display display(13, 11, 9, 10, 8, BL_PIN);
 
 // ==================== 页面管理 ====================
-const int PAGE_COUNT = 2;
+const int PAGE_COUNT = 3;
 int currentPage = 0;
 unsigned long lastButtonPress = 0;
 // debounceTime 已在 rtos_config.cpp 中定义
@@ -50,7 +50,8 @@ unsigned long lastButtonPress = 0;
 typedef void (*PageFunction)();
 void page1();  // 传感器页
 void page2();  // 运行时间页
-PageFunction pages[PAGE_COUNT] = { page1, page2 };
+void page3();  // 系统状态页
+PageFunction pages[PAGE_COUNT] = { page1, page2, page3 };
 
 // ==================== 时间显示相关(优化版)====================
 // 强制刷新运行时间显示(用于页面切换时立即显示最新时间)
@@ -95,6 +96,35 @@ void page2() {
     // 运行时间页面:先绘制标题, 再显示当前时间
     display.drawText(20, 20, "Uptime", FONT_LARGE_SIZE, 0, 255, 255);
     refreshTimeDisplay();   // 立即显示当前时间(内部已处理局部清除)
+}
+
+// ==================== 系统状态页面:显示 BLE 连接状态和系统信息
+void page3() {
+    // 获取系统信息
+    unsigned long seconds = millis() / 1000;
+    unsigned long minutes = seconds / 60;
+    unsigned long hours = minutes / 60;
+    bool bleConnected = BLEManager::isConnected();
+    
+    // 绘制标题
+    display.drawText(20, 15, "System Status", FONT_MEDIUM_SIZE, 0, 255, 255);
+    
+    // 显示 BLE 连接状态
+    if (bleConnected) {
+        display.drawText(10, 35, "BLE: Connected", FONT_MEDIUM_SIZE, 0, 0, 255, 0);
+    } else {
+        display.drawText(10, 35, "BLE: Disconnected", FONT_MEDIUM_SIZE, 0, 255, 0, 0);
+    }
+    
+    // 显示运行时间
+    char uptime[32];
+    snprintf(uptime, sizeof(uptime), "Uptime: %luh%lum", hours, minutes % 60);
+    display.drawText(10, 50, uptime, FONT_MEDIUM_SIZE, 255, 255, 255);
+    
+    // 显示当前页面
+    char pageInfo[16];
+    snprintf(pageInfo, sizeof(pageInfo), "Page: %d/%d", currentPage + 1, PAGE_COUNT);
+    display.drawText(10, 65, pageInfo, FONT_MEDIUM_SIZE, 255, 255, 255);
 }
 
 // ==================== BLE 回调(可选)====================

@@ -35,8 +35,10 @@ QueueHandle_t xSensorDataQueue = nullptr;
 // ==================== 外部全局变量声明 ====================
 extern Display display;
 extern int currentPage;
+extern const int PAGE_COUNT;
 extern void page1();
 extern void page2();
+extern void page3();
 extern void refreshTimeDisplay();
 extern unsigned long lastButtonPress;
 // 引脚定义已经在 rtos_config.h 中提供
@@ -194,20 +196,24 @@ void display_task(void *pvParameters) {
                     display.clear();
                     if (currentPage == 0) {
                         page1();
-                    } else {
+                    } else if (currentPage == 1) {
                         page2();
+                    } else {
+                        page3();
                     }
                     Serial.println("Screen woken up");
                 } else {
                     // 切换页面
-                    currentPage = (currentPage + 1) % 2;
+                    currentPage = (currentPage + 1) % PAGE_COUNT;
                     Serial.print("Switched to page: ");
                     Serial.println(currentPage);
                     display.clear();
                     if (currentPage == 0) {
                         page1();
-                    } else {
+                    } else if (currentPage == 1) {
                         page2();
+                    } else {
+                        page3();
                     }
                 }
 
