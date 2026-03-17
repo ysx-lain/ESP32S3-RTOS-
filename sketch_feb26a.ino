@@ -100,28 +100,23 @@ void page2() {
 
 // ==================== 系统状态页面:显示 BLE 连接状态和系统信息
 void page3() {
-    // 获取系统信息
     unsigned long seconds = millis() / 1000;
     unsigned long minutes = seconds / 60;
     unsigned long hours = minutes / 60;
     bool bleConnected = BLEManager::isConnected();
     
-    // 绘制标题
     display.drawText(20, 15, "System Status", FONT_MEDIUM_SIZE, 255, 255, 255);
     
-    // 显示 BLE 连接状态
     if (bleConnected) {
         display.drawText(10, 35, "BLE: Connected", FONT_MEDIUM_SIZE, 0, 255, 0);
     } else {
         display.drawText(10, 35, "BLE: Disconnected", FONT_MEDIUM_SIZE, 255, 0, 0);
     }
     
-    // 显示运行时间
     char uptime[32];
     snprintf(uptime, sizeof(uptime), "Uptime: %luh%lum", hours, minutes % 60);
     display.drawText(10, 50, uptime, FONT_MEDIUM_SIZE, 255, 255, 255);
     
-    // 显示当前页面
     char pageInfo[16];
     snprintf(pageInfo, sizeof(pageInfo), "Page: %d/%d", currentPage + 1, PAGE_COUNT);
     display.drawText(10, 65, pageInfo, FONT_MEDIUM_SIZE, 255, 255, 255);
