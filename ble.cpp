@@ -121,19 +121,15 @@ void BLEManager::begin(const char* deviceName) {
     // 启动服务
     pService->start();
 
-    // 配置广播
+    // 配置广播 - 兼容所有 NimBLE 版本
     NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
+    
+    // 添加服务 UUID 并直接设置名称
     pAdvertising->addServiceUUID(SERVICE_UUID);
+    pAdvertising->setName(deviceName);
     
-    // 在新版 NimBLE 中，设备名称放在扫描响应中
-    NimBLEAdvertisementData advertisementData;
-    advertisementData.setCompleteServices(NimBLEUUID(SERVICE_UUID));
-    advertisementData.setFlags();
-    pAdvertising->setAdvertisementData(advertisementData);
-    
-    NimBLEAdvertisementData scanResponseData;
-    scanResponseData.setName(deviceName);  // 将设备名称放在扫描响应中
-    pAdvertising->setScanResponseData(scanResponseData);
+    // 使用默认配置，不手动拆分广告数据和扫描响应
+    // 这在大多数版本的 NimBLE 上都能正常工作
 
     // 开始广播
     pAdvertising->start();
