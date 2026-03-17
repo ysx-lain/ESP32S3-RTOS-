@@ -251,12 +251,12 @@
         async function connect() {
             try {
                 const select = document.getElementById('portSelect');
-                if (!select.value) {
+                if (!select.selectedIndex || select.options[select.selectedIndex].value == "") {
                     alert('请选择一个端口');
                     return;
                 }
 
-                port = select.value;
+                port = select.options[select.selectedIndex].value;
                 await port.open({ baudRate: 115200 });
                 connected = true;
                 startTime = Date.now();
