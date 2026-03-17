@@ -180,6 +180,40 @@
     </div>
 
     <div class="card">
+        <h3>网页模拟数据（无硬件时测试）</h3>
+        <div class="controls">
+            <button id="startSimulateBtn">开始模拟</button>
+            <button id="stopSimulateBtn" disabled>停止模拟</button>
+        </div>
+        <div class="data" id="simulateData">
+            <div class="sensor-item">
+                <div class="sensor-name">CO₂ 浓度</div>
+                <div class="sensor-value" id="sim_co2">--<span class="sensor-unit">ppm</span></div>
+            </div>
+            <div class="sensor-item">
+                <div class="sensor-name">臭氧 (O₃)</div>
+                <div class="sensor-value" id="sim_ozone">--<span class="sensor-unit">ppb</span></div>
+            </div>
+            <div class="sensor-item">
+                <div class="sensor-name">乙醛 (C₂H₄O)</div>
+                <div class="sensor-value" id="sim_acetaldehyde">--<span class="sensor-unit">ppb</span></div>
+            </div>
+            <div class="sensor-item">
+                <div class="sensor-name">乙烯 (C₂H₄)</div>
+                <div class="sensor-value" id="sim_ethylene">--<span class="sensor-unit">ppm</span></div>
+            </div>
+            <div class="sensor-item">
+                <div class="sensor-name">温度</div>
+                <div class="sensor-value" id="sim_temp">--<span class="sensor-unit">°C</span></div>
+            </div>
+            <div class="sensor-item">
+                <div class="sensor-name">湿度</div>
+                <div class="sensor-value" id="sim_hum">--<span class="sensor-unit">%</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
         <h3>日志</h3>
         <div class="log" id="log"></div>
     </div>
@@ -217,6 +251,74 @@
         let errorPackets = 0;
         let startTime = null;
         const expectedStructSize = 24; // sizeof(SensorReading) = 4*6 = 24 bytes
+
+        // ==================== 网页端模拟传感器数据 ====================
+        let simulateInterval = null;
+        let sim_base_co2 = 420;
+        let sim_base_ozone = 30;
+        let sim_base_acetaldehyde = 5;
+        let sim_base_ethylene = 0.5;
+        let sim_base_temp = 25;
+        let sim_base_hum = 50;
+        let sim_counter = 0;
+        const rand = (min, max) => min + Math.random() * (max - min);
+
+        function updateSimulate() {
+            // 随机游走模拟
+            sim_base_co2 += rand(-10, 10);
+            sim_base_ozone += rand(-3, 3);
+            sim_base_acetaldehyde += rand(-0.5, 0.5);
+            sim_base_ethylene += rand(-0.05, 0.05);
+            sim_base_temp += rand(-0.5, 0.5);
+            sim_base_hum += rand(-2, 2);
+
+            // 限制范围
+            sim_base_co2 = Math.max(400, Math.min(2000, sim_base_co2));
+            sim_base_ozone = Math.max(0, Math.min(100, sim_base_ozone));
+            sim_base_acetaldehyde = Math.max(0, Math.min(50, sim_base_acetaldehyde));
+            sim_base_ethylene = Math.max(0, Math.min(5, sim_base_ethylene));
+            sim_base_temp = Math.max(20, Math.min(35, sim_base_temp));
+            sim_base_hum = Math.max(30, Math.min(80, sim_base_hum));
+
+            // 更新显示
+            document.getElementById('sim_co2').textContent = sim_base_co2.toFixed(0);
+            document.getElementById('sim_ozone').textContent = sim_base_ozone.toFixed(1);
+            document.getElementById('sim_acetaldehyde').textContent = sim_base_acetaldehyde.toFixed(1);
+            document.getElementById('sim_ethylene').textContent = sim_base_ethylene.toFixed(2);
+            document.getElementById('sim_temp').textContent = sim_base_temp.toFixed(1);
+            document.getElementById('sim_hum').textContent = sim_base_hum.toFixed(1);
+
+            sim_counter++;
+        }
+
+        function startSimulate() {
+            if (simulateInterval) {
+                clearInterval(simulateInterval);
+            }
+            // 重置数据
+            sim_base_co2 = 420;
+            sim_base_ozone = 30;
+            sim_base_acetaldehyde = 5;
+            sim_base_ethylene = 0.5;
+            sim_base_temp = 25;
+            sim_base_hum = 50;
+            sim_counter = 0;
+            addLog('✅ 开始模拟传感器数据，10Hz 更新');
+            // 100ms 更新一次 = 10Hz
+            simulateInterval = setInterval(updateSimulate, 100);
+            document.getElementById('startSimulateBtn').disabled = true;
+            document.getElementById('stopSimulateBtn').disabled = false;
+        }
+
+        function stopSimulate() {
+            if (simulateInterval) {
+                clearInterval(simulateInterval);
+                simulateInterval = null;
+                addLog('⏸️ 停止模拟传感器数据');
+                document.getElementById('startSimulateBtn').disabled = false;
+                document.getElementById('stopSimulateBtn').disabled = true;
+            }
+        }
 
         // 添加日志
         function addLog(msg) {
@@ -363,6 +465,8 @@
             document.getElementById('requestPortBtn').addEventListener('click', requestPort);
             document.getElementById('connectBtn').addEventListener('click', connect);
             document.getElementById('disconnectBtn').addEventListener('click', disconnect);
+            document.getElementById('startSimulateBtn').addEventListener('click', startSimulate);
+            document.getElementById('stopSimulateBtn').addEventListener('click', stopSimulate);
         });
     </script>
 </body>
