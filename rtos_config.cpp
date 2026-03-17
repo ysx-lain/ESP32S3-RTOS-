@@ -35,12 +35,12 @@ QueueHandle_t xSensorDataQueue = nullptr;
 // ==================== 外部全局变量声明 ====================
 extern Display display;
 extern int currentPage;
-extern const int PAGE_COUNT;
 extern void page1();
 extern void page2();
 extern void page3();
 extern void refreshTimeDisplay();
 extern unsigned long lastButtonPress;
+extern const int PAGE_COUNT;
 // 引脚定义已经在 rtos_config.h 中提供
 
 // ==================== 常量定义 ====================

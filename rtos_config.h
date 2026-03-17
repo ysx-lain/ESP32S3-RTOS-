@@ -98,4 +98,7 @@ void ble_task(void *pvParameters);
 // 按键消抖时间(毫秒)
 extern const unsigned long debounceTime;
 
+// 总页面数量(定义在 sketch_feb26a.ino)
+extern const int PAGE_COUNT;
+
 #endif // RTOS_CONFIG_H
