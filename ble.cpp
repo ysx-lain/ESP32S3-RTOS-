@@ -168,6 +168,11 @@ bool BLEManager::sendSensorData(uint8_t* data, size_t length) {
     _pTxCharacteristic->setValue(data, length);
     _pTxCharacteristic->notify();
     _lastSendTime = now;
+    
+    // 打印调试日志：发送了多少字节
+    Serial.print("[BLE] Sent binary: ");
+    Serial.print(length);
+    Serial.println(" bytes");
     return true;
 }
 

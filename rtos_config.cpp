@@ -121,6 +121,11 @@ void sensor_task(void *pvParameters) {
     static float base_ethylene = 0.5f;    // 乙烯 C2H4 ppm
     static int counter = 0;
 
+    // 启动时打印结构体大小
+    Serial.print("[SENSOR] SensorReading_t size = ");
+    Serial.print(sizeof(SensorReading_t));
+    Serial.println(" bytes (expected 36 bytes)");
+
     for (;;) {
         // 模拟生成传感器数据，每次随机微小变化
         SensorReading_t reading;
@@ -281,11 +286,17 @@ void ble_task(void *pvParameters) {
             if (hasReceivedData) {
                 // 更新时间戳为当前发送时间
                 lastReading.timestamp = millis();
-                BLEManager::sendSensorData((uint8_t*)&lastReading, sizeof(lastReading));
-                Serial.printf("BLE: Sent sensor data, temp=%.1f hum=%.1f timestamp=%lu\n",
+                size_t bytesSent = sizeof(lastReading);
+                BLEManager::sendSensorData((uint8_t*)&lastReading, bytesSent);
+                Serial.printf("[BLE-TX] struct size: %zu bytes, temp=%.1f hum=%.1f press=%.1f co2=%d ozone=%.1f acetaldehyde=%.1f ethylene=%.2f\n",
+                           bytesSent,
                            lastReading.temperature,
                            lastReading.humidity,
-                           lastReading.timestamp);
+                           lastReading.pressure,
+                           lastReading.co2,
+                           lastReading.ozone,
+                           lastReading.acetaldehyde,
+                           lastReading.ethylene);
             }
         } else {
             // 断开连接时, 让 BLE 栈做维护工作
