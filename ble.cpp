@@ -125,8 +125,8 @@ void BLEManager::begin(const char* deviceName) {
     NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(SERVICE_UUID);
     pAdvertising->setName(deviceName);  // 设置设备名称到广播数据中，让客户端能看到
-    // 开启扫描响应，让客户端可以获取完整设备名称
-    pAdvertising->setScanResponse(true);
+    // 在新版 NimBLE 中，setScanResponse 默认开启，不需要手动设置
+    // pAdvertising->setScanResponse(true);
 
     // 开始广播
     pAdvertising->start();
