@@ -432,8 +432,14 @@
                             buffer = buffer.slice(expectedStructSize);
 
                             try {
-                                // 把 Uint8Array 转成 ArrayBuffer 给 DataView
-                                const dataView = new DataView(packet.buffer);
+                                // 确保我们拿到的是 ArrayBuffer
+                                let arrayBuffer;
+                                if (packet.buffer instanceof ArrayBuffer) {
+                                    arrayBuffer = packet.buffer.slice(packet.byteOffset, packet.byteOffset + packet.byteLength);
+                                } else {
+                                    arrayBuffer = packet;
+                                }
+                                const dataView = new DataView(arrayBuffer);
                                 const reading = SensorReading.fromBytes(dataView);
                                 handleReading(reading);
                             } catch (e) {
