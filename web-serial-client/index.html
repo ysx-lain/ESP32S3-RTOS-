@@ -358,26 +358,49 @@
             addLog('🔌 已断开连接');
         }
 
+        // 请求用户选择串口，这是浏览器安全要求必须用户点击
+        async function requestPort() {
+            try {
+                const selectedPort = await navigator.serial.requestPort();
+                await refreshPorts();
+                // 选中用户刚选的端口
+                const select = document.getElementById('portSelect');
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].value === selectedPort) {
+                        select.selectedIndex = i;
+                        break;
+                    }
+                }
+                addLog('✅ 已选择端口');
+            } catch (e) {
+                console.error(e);
+                alert('选择端口失败: ' + e.message);
+            }
+        }
+
         // 初始化
         document.addEventListener('DOMContentLoaded', () => {
-            refreshPorts();
-            document.getElementById('connectBtn').addEventListener('click', connect);
-            document.getElementById('disconnectBtn').addEventListener('click', disconnect);
-
             // 检查 Web Serial API 是否支持
             if (!navigator.serial) {
                 alert('你的浏览器不支持 Web Serial API！请使用 Chrome/Edge 新版本。');
                 document.getElementById('connectBtn').disabled = true;
+                return;
             }
-        });
 
-        // 刷新端口按钮
-        document.addEventListener('DOMContentLoaded', () => {
-            const btn = document.createElement('button');
-            btn.textContent = '刷新端口';
-            btn.style.marginLeft = 'auto';
-            btn.addEventListener('click', refreshPorts);
-            document.querySelector('.controls').appendChild(btn);
+            refreshPorts();
+            document.getElementById('connectBtn').addEventListener('click', connect);
+            document.getElementById('disconnectBtn').addEventListener('click', disconnect);
+
+            // 添加手动选择端口按钮
+            const btnRefresh = document.createElement('button');
+            btnRefresh.textContent = '刷新端口';
+            btnRefresh.addEventListener('click', refreshPorts);
+            document.querySelector('.controls').appendChild(btnRefresh);
+
+            const btnSelect = document.createElement('button');
+            btnSelect.textContent = '选择端口';
+            btnSelect.addEventListener('click', requestPort);
+            document.querySelector('.controls').appendChild(btnSelect);
         });
     </script>
 </body>
