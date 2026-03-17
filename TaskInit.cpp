@@ -42,12 +42,14 @@ void rtos_init_all(void) {
         LOG_ERROR("Failed to create display mutex");
         return;
     }
+    LOG_INFO("Display mutex created");
 
     xSensorDataMutex = xSemaphoreCreateMutex();
     if (xSensorDataMutex == nullptr) {
         LOG_ERROR("Failed to create sensor data mutex");
         return;
     }
+    LOG_INFO("Sensor data mutex created");
 
     // 2. 创建队列
     xButtonEventQueue = xQueueCreate(QUEUE_LENGTH_BUTTON, sizeof(ButtonEvent_t));
@@ -55,12 +57,14 @@ void rtos_init_all(void) {
         LOG_ERROR("Failed to create button event queue");
         return;
     }
+    LOG_INFO("Button event queue created, length=%d", QUEUE_LENGTH_BUTTON);
 
     xSensorDataQueue = xQueueCreate(QUEUE_LENGTH_SENSOR, sizeof(SensorReading_t));
     if (xSensorDataQueue == nullptr) {
         LOG_ERROR("Failed to create sensor data queue");
         return;
     }
+    LOG_INFO("Sensor data queue created, length=%d", QUEUE_LENGTH_SENSOR);
 
     // 3. 创建所有任务，固定到 Core 1 运行
     // Arduino 核心在 Core 0 运行，应用任务放 Core 1 避免阻塞

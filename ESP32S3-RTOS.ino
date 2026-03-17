@@ -58,7 +58,11 @@ void setup() {
     LOG_INFO("Display ready");
 
     // 初始化 BLE
-    BLEManager::begin(BLE_DEVICE_NAME);
+    bool bleOk = BLEManager::begin(BLE_DEVICE_NAME);
+    if (!bleOk) {
+        LOG_ERROR("BLE initialization failed! Halting.");
+        while (1);
+    }
     LOG_INFO("BLE initialized, device name: %s", BLE_DEVICE_NAME);
 
     // 初始化所有 FreeRTOS 任务
