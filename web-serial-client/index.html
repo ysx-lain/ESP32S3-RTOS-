@@ -256,7 +256,8 @@
                     return;
                 }
 
-                port = await select.value.open({ baudRate: 115200 });
+                port = select.value;
+                await port.open({ baudRate: 115200 });
                 connected = true;
                 startTime = Date.now();
 
