@@ -432,13 +432,11 @@
                             buffer = buffer.slice(expectedStructSize);
 
                             try {
-                                // 确保我们拿到的是 ArrayBuffer
-                                let arrayBuffer;
-                                if (packet.buffer instanceof ArrayBuffer) {
-                                    arrayBuffer = packet.buffer.slice(packet.byteOffset, packet.byteOffset + packet.byteLength);
-                                } else {
-                                    arrayBuffer = packet;
-                                }
+                                // 创建一个全新的 ArrayBuffer 然后复制数据进去
+                                // 这样不管 slice() 怎么处理，一定是对的
+                                const arrayBuffer = new ArrayBuffer(expectedStructSize);
+                                const uint8 = new Uint8Array(arrayBuffer);
+                                uint8.set(packet);
                                 const dataView = new DataView(arrayBuffer);
                                 const reading = SensorReading.fromBytes(dataView);
                                 handleReading(reading);
