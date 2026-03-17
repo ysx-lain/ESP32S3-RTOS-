@@ -37,7 +37,7 @@ void (*BLEManager::_receiveCallback)(const String&) = nullptr;
  * @param pServer 触发事件的服务器指针
  */
 void BLEManager::ServerCallbacks::onConnect(NimBLEServer* pServer) {
-    _deviceConnected = true;
+    BLEManager::_deviceConnected = true;
     Serial.println("[BLE] Device connected");
 }
 
@@ -47,7 +47,7 @@ void BLEManager::ServerCallbacks::onConnect(NimBLEServer* pServer) {
  * @param pServer 触发事件的服务器指针
  */
 void BLEManager::ServerCallbacks::onDisconnect(NimBLEServer* pServer) {
-    _deviceConnected = false;
+    BLEManager::_deviceConnected = false;
     Serial.println("[BLE] Device disconnected");
 }
 
@@ -61,8 +61,8 @@ void BLEManager::CharCallbacks::onWrite(NimBLECharacteristic* pCharacteristic) {
     if (value.length() > 0) {
         Serial.print("[BLE] Received: ");
         Serial.println(value.c_str());
-        if (_receiveCallback) {
-            _receiveCallback(String(value.c_str()));
+        if (BLEManager::_receiveCallback) {
+            BLEManager::_receiveCallback(String(value.c_str()));
         }
     }
 }

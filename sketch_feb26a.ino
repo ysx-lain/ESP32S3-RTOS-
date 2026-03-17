@@ -45,7 +45,7 @@ Display display(13, 11, 9, 10, 8, BL_PIN);
 const int PAGE_COUNT = 2;
 int currentPage = 0;
 unsigned long lastButtonPress = 0;
-const unsigned long debounceTime = 200;
+// debounceTime 已在 rtos_config.cpp 中定义
 
 typedef void (*PageFunction)();
 void page1();  // 传感器页

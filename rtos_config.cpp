@@ -39,8 +39,10 @@ extern void page1();
 extern void page2();
 extern void refreshTimeDisplay();
 extern unsigned long lastButtonPress;
-extern const unsigned long debounceTime;
 // 引脚定义已经在 rtos_config.h 中提供
+
+// ==================== 常量定义 ====================
+const unsigned long debounceTime = 200;  // 按键消抖时间（毫秒）
 
 // ==================== 按键扫描任务 ====================
 void button_task(void *pvParameters) {
@@ -185,7 +187,11 @@ void display_task(void *pvParameters) {
 
         // 检查自动息屏（即使没有按键事件也要定期检查）
         // 这里每处理完一个按键事件就检查一次，比轮询更高效
-        if (display.isScreenOn()) {
+        // 只有当距离上次检查已经过去了一定时间，才需要检查
+        static unsigned long lastCheck = 0;
+        unsigned long now = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        if (display.isScreenOn() && (now - lastCheck > 1000)) {
+            lastCheck = now;
             if (xSemaphoreTake(xDisplayMutex, pdMS_TO_TICKS(100))) {
                 display.checkSleep(10000);
                 xSemaphoreGive(xDisplayMutex);
