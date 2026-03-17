@@ -124,8 +124,9 @@ void BLEManager::begin(const char* deviceName) {
     // 配置广播
     NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(SERVICE_UUID);
-    // 某些旧版库可能没有 setScanResponse 方法, 若编译报错请注释下行
-    // pAdvertising->setScanResponse(true); // 被注释, 保留原样
+    pAdvertising->setName(deviceName);  // 设置设备名称到广播数据中，让客户端能看到
+    // 开启扫描响应，让客户端可以获取完整设备名称
+    pAdvertising->setScanResponse(true);
 
     // 开始广播
     pAdvertising->start();
@@ -181,6 +182,12 @@ void BLEManager::update() {
     }
     if (_deviceConnected != _oldDeviceConnected) {
         _oldDeviceConnected = _deviceConnected;
+        // 连接状态变化时打印日志
+        if (_deviceConnected) {
+            Serial.println("[BLE] Device connected");
+        } else {
+            Serial.println("[BLE] Device disconnected");
+        }
     }
 }
 
