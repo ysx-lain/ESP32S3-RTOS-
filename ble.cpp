@@ -102,15 +102,6 @@ void BLEManager::begin(const char* deviceName) {
         NIMBLE_PROPERTY::NOTIFY
     );
 
-    // 为发送特征添加 CCCD 描述符(UUID = 0x2902)
-    NimBLEDescriptor* pDesc = new NimBLEDescriptor(
-        NimBLEUUID((uint16_t)0x2902),                    // CCCD UUID
-        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE, // 属性:可读可写
-        2,                                                // 最大长度 2 字节
-        nullptr                                           // 所属特征(可选)
-    );
-    _pTxCharacteristic->addDescriptor(pDesc);
-
     // 创建接收特征(Write)
     _pRxCharacteristic = pService->createCharacteristic(
         CHARACTERISTIC_UUID_RX,
@@ -121,20 +112,16 @@ void BLEManager::begin(const char* deviceName) {
     // 启动服务
     pService->start();
 
-    // 配置广播 - 兼容所有 NimBLE 版本
+    // 配置广播 - 最基础版本，兼容所有 NimBLE 版本
     NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
     
-    // 添加服务 UUID 并直接设置名称
+    // 添加服务 UUID
     pAdvertising->addServiceUUID(SERVICE_UUID);
-    pAdvertising->setName(deviceName);
     
-    // 使用默认配置，不手动拆分广告数据和扫描响应
-    // 这在大多数版本的 NimBLE 上都能正常工作
-
     // 开始广播
     pAdvertising->start();
 
-    Serial.println("[BLE] Advertising started");
+    Serial.println("[BLE] Advertising started, name: " + String(deviceName));
 }
 
 /**
