@@ -1,10 +1,10 @@
 /**
  * @file ble.cpp
- * @brief BLE 通讯模块实现文件（基于 NimBLE 库）
+ * @brief BLE 通讯模块实现文件(基于 NimBLE 库)
  * 
- * 本文件实现了 BLEManager 类的所有方法，包括初始化、回调处理、数据发送等。
+ * 本文件实现了 BLEManager 类的所有方法, 包括初始化, 回调处理, 数据发送等. 
  * 
- * @note 已移除 override 关键字，以兼容当前 NimBLE 库版本。
+ * @note 已移除 override 关键字, 以兼容当前 NimBLE 库版本. 
  * 
  * @author 根据用户原始代码适配
  * @date 2024-03-02
@@ -52,7 +52,7 @@ void BLEManager::ServerCallbacks::onDisconnect(NimBLEServer* pServer) {
 }
 
 /**
- * @brief 特征写入回调（客户端发送数据到设备）
+ * @brief 特征写入回调(客户端发送数据到设备)
  * 
  * @param pCharacteristic 被写入的特征指针
  */
@@ -68,7 +68,7 @@ void BLEManager::CharCallbacks::onWrite(NimBLECharacteristic* pCharacteristic) {
 }
 
 /**
- * @brief 特征读取回调（客户端读取特征时触发）
+ * @brief 特征读取回调(客户端读取特征时触发)
  * 
  * @param pCharacteristic 被读取的特征指针
  */
@@ -96,22 +96,22 @@ void BLEManager::begin(const char* deviceName) {
     // 创建服务
     NimBLEService* pService = _pServer->createService(SERVICE_UUID);
 
-    // 创建发送特征（Notify）
+    // 创建发送特征(Notify)
     _pTxCharacteristic = pService->createCharacteristic(
         CHARACTERISTIC_UUID_TX,
         NIMBLE_PROPERTY::NOTIFY
     );
 
-    // 为发送特征添加 CCCD 描述符（UUID = 0x2902）
+    // 为发送特征添加 CCCD 描述符(UUID = 0x2902)
     NimBLEDescriptor* pDesc = new NimBLEDescriptor(
         NimBLEUUID((uint16_t)0x2902),                    // CCCD UUID
-        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE, // 属性：可读可写
+        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE, // 属性:可读可写
         2,                                                // 最大长度 2 字节
-        nullptr                                           // 所属特征（可选）
+        nullptr                                           // 所属特征(可选)
     );
     _pTxCharacteristic->addDescriptor(pDesc);
 
-    // 创建接收特征（Write）
+    // 创建接收特征(Write)
     _pRxCharacteristic = pService->createCharacteristic(
         CHARACTERISTIC_UUID_RX,
         NIMBLE_PROPERTY::WRITE
@@ -124,8 +124,8 @@ void BLEManager::begin(const char* deviceName) {
     // 配置广播
     NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(SERVICE_UUID);
-    // 某些旧版库可能没有 setScanResponse 方法，若编译报错请注释下行
-    // pAdvertising->setScanResponse(true); // 被注释，保留原样
+    // 某些旧版库可能没有 setScanResponse 方法, 若编译报错请注释下行
+    // pAdvertising->setScanResponse(true); // 被注释, 保留原样
 
     // 开始广播
     pAdvertising->start();
@@ -134,7 +134,7 @@ void BLEManager::begin(const char* deviceName) {
 }
 
 /**
- * @brief 发送传感器数据（字符串形式）
+ * @brief 发送传感器数据(字符串形式)
  * 
  * @param data 要发送的字符串
  * @return true  发送成功
@@ -151,7 +151,7 @@ bool BLEManager::sendSensorData(const String& data) {
 }
 
 /**
- * @brief 发送传感器数据（字节数组形式）
+ * @brief 发送传感器数据(字节数组形式)
  * 
  * @param data   数据指针
  * @param length 数据长度
@@ -169,7 +169,7 @@ bool BLEManager::sendSensorData(uint8_t* data, size_t length) {
 }
 
 /**
- * @brief 维护 BLE 状态，处理断开后自动重广播
+ * @brief 维护 BLE 状态, 处理断开后自动重广播
  */
 void BLEManager::update() {
     // 处理断开后重新广播
@@ -187,7 +187,7 @@ void BLEManager::update() {
 /**
  * @brief 注册接收数据的回调函数
  * 
- * @param callback 用户函数指针，参数为接收到的字符串
+ * @param callback 用户函数指针, 参数为接收到的字符串
  */
 void BLEManager::onReceiveData(void (*callback)(const String&)) {
     _receiveCallback = callback;

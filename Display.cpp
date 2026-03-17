@@ -2,8 +2,8 @@
  * @file Display.cpp
  * @brief ST7735 屏幕驱动模块实现
  * 
- * 实现 Display 类的所有方法，包括初始化、绘图、传感器显示、
- * 背光控制和硬件检测。
+ * 实现 Display 类的所有方法, 包括初始化, 绘图, 传感器显示, 
+ * 背光控制和硬件检测. 
  * 
  * @author ysx
  * @date 2024-03-02
@@ -12,7 +12,7 @@
 
 #include "Display.h"
 
-// 构造函数：初始化 Ucglib 对象，保存背光引脚，设置内部标志
+// 构造函数:初始化 Ucglib 对象, 保存背光引脚, 设置内部标志
 Display::Display(uint8_t sclk, uint8_t data, uint8_t cd, uint8_t cs, uint8_t reset, uint8_t blPin)
     : ucg(sclk, data, cd, cs, reset), 
       screenOn(false), 
@@ -38,15 +38,15 @@ bool Display::begin(uint8_t rotation) {
     return true;
 }
 
-// 硬件自检：尝试清屏并画点，若 _initialized 为 false 则直接失败
+// 硬件自检:尝试清屏并画点, 若 _initialized 为 false 则直接失败
 bool Display::checkHardware() {
     if (!_initialized) return false;
-    // 简单测试：清屏并画一个白点，等待短暂时间后恢复
+    // 简单测试:清屏并画一个白点, 等待短暂时间后恢复
     ucg_ClearScreen(ucg_ptr);
     ucg_SetColor(ucg_ptr, 0, 255, 255, 255);
     ucg_DrawPixel(ucg_ptr, 10, 10);
-    delay(10);  // 短暂延时让操作完成（实际不等待显示，仅示意）
-    // 由于无法读取屏幕状态，我们只能假定如果初始化成功则硬件正常
+    delay(10);  // 短暂延时让操作完成(实际不等待显示, 仅示意)
+    // 由于无法读取屏幕状态, 我们只能假定如果初始化成功则硬件正常
     return true;
 }
 

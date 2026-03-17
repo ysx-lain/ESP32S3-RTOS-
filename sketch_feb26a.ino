@@ -1,26 +1,26 @@
 /**
  * @file ESP32S3-RTOS.ino
- * @brief 主程序：FreeRTOS 多任务版本
+ * @brief 主程序:FreeRTOS 多任务版本
  * 
- * 硬件接线：
- *   - 屏幕：sclk=13, data=11, cd=9, cs=10, reset=8
- *   - 背光：GPIO12（高电平点亮）
- *   - 按键：GPIO2（接 GND，内部上拉）
+ * 硬件接线:
+ *   - 屏幕:sclk=13, data=11, cd=9, cs=10, reset=8
+ *   - 背光:GPIO12(高电平点亮)
+ *   - 按键:GPIO2(接 GND, 内部上拉)
  * 
- * 功能：
- *   - FreeRTOS 多任务架构，每个功能模块一个独立任务
+ * 功能:
+ *   - FreeRTOS 多任务架构, 每个功能模块一个独立任务
  *   - 按键扫描任务 → 事件队列 → 显示任务
  *   - 传感器读取任务 → 数据队列 → 显示任务 + BLE 任务
  *   - 时间更新任务 → 每分钟刷新显示
- *   - 10秒无操作自动息屏，按键唤醒
+ *   - 10秒无操作自动息屏, 按键唤醒
  *   - 可选 BLE 通信
  * 
- * 任务划分：
- *   1. button_task  - 按键扫描，优先级 1
- *   2. clock_task   - 时间更新，优先级 1
- *   3. sensor_task  - 传感器读取，优先级 2
- *   4. display_task - 显示更新，优先级 2
- *   5. ble_task     - BLE 通信，优先级 3 (可选)
+ * 任务划分:
+ *   1. button_task  - 按键扫描, 优先级 1
+ *   2. clock_task   - 时间更新, 优先级 1
+ *   3. sensor_task  - 传感器读取, 优先级 2
+ *   4. display_task - 显示更新, 优先级 2
+ *   5. ble_task     - BLE 通信, 优先级 3 (可选)
  *
  * @author ysx
  * @date 2024-03-16
@@ -52,8 +52,8 @@ void page1();  // 传感器页
 void page2();  // 运行时间页
 PageFunction pages[PAGE_COUNT] = { page1, page2 };
 
-// ==================== 时间显示相关（优化版）====================
-// 强制刷新运行时间显示（用于页面切换时立即显示最新时间）
+// ==================== 时间显示相关(优化版)====================
+// 强制刷新运行时间显示(用于页面切换时立即显示最新时间)
 void refreshTimeDisplay() {
     unsigned long seconds = millis() / 1000;
     unsigned long minutes = seconds / 60;
@@ -62,7 +62,7 @@ void refreshTimeDisplay() {
     char buffer[32];
     snprintf(buffer, sizeof(buffer), "Uptime: %lud %02lu:%02lu", days, hours % 24, minutes % 60);
 
-    // 中号字体（7x13）的高度为13像素，基线y=50
+    // 中号字体(7x13)的高度为13像素, 基线y=50
     const int fontHeight = 13;
     const int baselineY = 50;
     const int clearX = 10;
@@ -77,14 +77,14 @@ void refreshTimeDisplay() {
 // ==================== 页面函数 ====================
 void page1() {
     // 从传感器队列获取最新数据显示
-    // 这里先保留原来的静态显示，实际使用时你可以修改成从队列读取
+    // 这里先保留原来的静态显示, 实际使用时你可以修改成从队列读取
     display.Sensor(3, "Temp", 25.5, "C");
     display.Sensor(4, "Hum",  60,   "%");
     display.Sensor(5, "Count", 100, NULL);
     display.Sensor(6, "Press", 1013.25, "hPa");
     display.Sensor(7, "CO2",   400,  "ppm");
 
-    // 如果你想显示最新读取的传感器数据，可以这样做：
+    // 如果你想显示最新读取的传感器数据, 可以这样做:
     /*
     SensorReading_t reading;
     // 非阻塞读取最新数据
@@ -100,13 +100,13 @@ void page1() {
 }
 
 void page2() {
-    // 运行时间页面：先绘制标题，再显示当前时间
+    // 运行时间页面:先绘制标题, 再显示当前时间
     display.drawText(20, 20, "Uptime", FONT_LARGE_SIZE, 0, 255, 255);
-    refreshTimeDisplay();   // 立即显示当前时间（内部已处理局部清除）
+    refreshTimeDisplay();   // 立即显示当前时间(内部已处理局部清除)
 }
 
-// ==================== BLE 回调（可选）====================
-// 如需启用 BLE，取消注释以下部分，并在 setup() 中调用 BLEManager::begin()
+// ==================== BLE 回调(可选)====================
+// 如需启用 BLE, 取消注释以下部分, 并在 setup() 中调用 BLEManager::begin()
 /*
 void onBLECommand(const String& cmd) {
     Serial.print("BLE command: ");
@@ -130,23 +130,23 @@ void setup() {
     }
     Serial.println("Display ready");
 
-    // 初始化系统时钟（可选，暂不使用其 ticks）
+    // 初始化系统时钟(可选, 暂不使用其 ticks)
     // SystemClock::begin();
 
-    // 初始化 BLE（已启用）
+    // 初始化 BLE(已启用)
     BLEManager::begin("ESP32-S3_Sensor");
     // BLEManager::onReceiveData(onBLECommand);
 
-    // 初始化 FreeRTOS：创建互斥锁、队列、所有任务
+    // 初始化 FreeRTOS:创建互斥锁, 队列, 所有任务
     rtos_init();
 
     Serial.println("=== System ready (FreeRTOS multi-task mode) ===");
 }
 
 // ==================== 主循环 ====================
-// 在 Arduino-ESP32 中，loop() 本身也是一个 FreeRTOS 任务
-// 这里我们不需要做任何事，所有工作都在各个任务中完成
+// 在 Arduino-ESP32 中, loop() 本身也是一个 FreeRTOS 任务
+// 这里我们不需要做任何事, 所有工作都在各个任务中完成
 void loop() {
-    // 无事可做，睡眠让出CPU
+    // 无事可做, 睡眠让出CPU
     vTaskDelay(pdMS_TO_TICKS(1000));
 }

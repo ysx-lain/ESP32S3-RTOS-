@@ -1,9 +1,9 @@
 /**
  * @file rtos_config.h
  * @brief FreeRTOS 任务配置头文件
- * @details 定义任务优先级、栈大小、任务句柄
+ * @details 定义任务优先级, 栈大小, 任务句柄
  *
- * 任务划分：
+ * 任务划分:
  *  - 按键扫描任务 (低优先级)
  *  - 屏幕刷新/显示任务 (中优先级)
  *  - 传感器读取任务 (中优先级)
@@ -30,7 +30,7 @@
 #define TASK_PRIORITY_DISPLAY   2    // 屏幕显示任务优先级
 #define TASK_PRIORITY_BLE       3    // BLE 通信任务优先级
 
-// ==================== 任务栈大小定义 (单位：字，每个字 4 字节) ====================
+// ==================== 任务栈大小定义 (单位:字, 每个字 4 字节) ====================
 #define TASK_STACK_BUTTON      2048  // 按键任务栈 (8KB)
 #define TASK_STACK_CLOCK       2048  // 时间任务栈 (8KB)
 #define TASK_STACK_SENSOR      4096  // 传感器任务栈 (16KB)
@@ -51,20 +51,20 @@ extern TaskHandle_t xDisplayTaskHandle;
 extern TaskHandle_t xBLETaskHandle;
 
 // ==================== 互斥锁 (保护共享资源) ====================
-// 显示设备是共享资源，多个任务访问需要互斥
+// 显示设备是共享资源, 多个任务访问需要互斥
 extern SemaphoreHandle_t xDisplayMutex;
 // 传感器数据结构体也可能被多个任务访问
 extern SemaphoreHandle_t xSensorDataMutex;
 
 // ==================== 消息队列 (任务间通信) ====================
-// 按键事件队列：发送按键按下事件到显示任务
+// 按键事件队列:发送按键按下事件到显示任务
 typedef struct {
     unsigned long timestamp;
     bool isLongPress;
 } ButtonEvent_t;
 extern QueueHandle_t xButtonEventQueue;
 
-// 传感器数据队列：传感器任务把读取的数据发送给显示任务和 BLE 任务
+// 传感器数据队列:传感器任务把读取的数据发送给显示任务和 BLE 任务
 #define MAX_SENSOR_COUNT 5
 typedef struct {
     float temperature;      // 温度
@@ -77,8 +77,8 @@ typedef struct {
 extern QueueHandle_t xSensorDataQueue;
 
 // ==================== 函数声明 ====================
-void rtos_init(void);           // 初始化 RTOS：创建互斥锁、队列、任务
-void rtos_start(void);          // 启动所有任务（实际上创建后就启动了）
+void rtos_init(void);           // 初始化 RTOS:创建互斥锁, 队列, 任务
+void rtos_start(void);          // 启动所有任务(实际上创建后就启动了)
 void button_task(void *pvParameters);
 void clock_task(void *pvParameters);
 void sensor_task(void *pvParameters);
@@ -86,7 +86,7 @@ void display_task(void *pvParameters);
 void ble_task(void *pvParameters);
 
 // ==================== 硬件引脚定义 ====================
-// 如果主程序没有定义，这里提供默认定义
+// 如果主程序没有定义, 这里提供默认定义
 #ifndef BUTTON_PIN
 #define BUTTON_PIN 2
 #endif
@@ -95,7 +95,7 @@ void ble_task(void *pvParameters);
 #endif
 
 // ==================== 常量定义 ====================
-// 按键消抖时间（毫秒）
+// 按键消抖时间(毫秒)
 extern const unsigned long debounceTime;
 
 #endif // RTOS_CONFIG_H
