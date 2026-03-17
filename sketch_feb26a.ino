@@ -85,11 +85,13 @@ void page1() {
     }
     
     // 显示最新读取的传感器数据
-    display.Sensor(3, "Temp", reading.temperature, "C");
-    display.Sensor(4, "Hum",  reading.humidity,   "%");
-    display.Sensor(5, "Count", reading.count, NULL);
-    display.Sensor(6, "Press", reading.pressure, "hPa");
-    display.Sensor(7, "CO2",   reading.co2,  "ppm");
+    display.Sensor(1, "Temp", reading.temperature, "C");
+    display.Sensor(2, "Hum",  reading.humidity,   "%");
+    display.Sensor(3, "Press", reading.pressure, "hPa");
+    display.Sensor(4, "CO₂",   reading.co2,  "ppm");
+    display.Sensor(5, "O₃",   reading.ozone,  "ppb");
+    display.Sensor(6, "C₂H₄O", reading.acetaldehyde, "ppb");
+    display.Sensor(7, "C₂H₄", reading.ethylene, "ppm");
 }
 
 void page2() {
@@ -123,7 +125,7 @@ void page3() {
 }
 
 // ==================== BLE 回调(可选)====================
-// 如需启用 BLE, 取消注释以下部分, 并在 setup() 中调用 BLEManager::begin()
+// 如需启用 BLE, 取消注释以下部分, 并在 setup() 中调用 BLEManager::onReceiveData(onBLECommand);
 /*
 void onBLECommand(const String& cmd) {
     Serial.print("BLE command: ");
@@ -154,10 +156,10 @@ void setup() {
     BLEManager::begin("ESP32-S3_Sensor");
     // BLEManager::onReceiveData(onBLECommand);
 
-    // 初始化 FreeRTOS:创建互斥锁, 队列, 所有任务
+    // 初始化 FreeRTOS:创建互斥锁、队列、所有任务
     rtos_init();
 
-    Serial.println("=== System ready (FreeRTOS multi-task mode) ===");
+    Serial.println("=== System ready (FreeRTOS multi-task mode ===");
 }
 
 // ==================== 主循环 ====================

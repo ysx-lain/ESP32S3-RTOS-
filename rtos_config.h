@@ -65,15 +65,18 @@ typedef struct {
 extern QueueHandle_t xButtonEventQueue;
 
 // 传感器数据队列:传感器任务把读取的数据发送给显示任务和 BLE 任务
-#define MAX_SENSOR_COUNT 5
 typedef struct {
-    float temperature;      // 温度
-    float humidity;          // 湿度
+    float temperature;      // 温度 ℃
+    float humidity;          // 湿度 %RH
     int count;              // 计数
-    float pressure;         // 气压
-    int co2;                // CO2
-    unsigned long timestamp;
+    float pressure;         // 气压 hPa
+    int co2;                // CO₂ 浓度 ppm
+    float ozone;             // 臭氧 O₃ ppb
+    float acetaldehyde;     // 乙醛 C₂H₄O ppb
+    float ethylene;          // 乙烯 C₂H₄ ppm
+    unsigned long timestamp; // 主机时间戳（毫秒）
 } SensorReading_t;
+// 新结构体大小 = 4*8 = 36 字节
 extern QueueHandle_t xSensorDataQueue;
 
 // ==================== 函数声明 ====================

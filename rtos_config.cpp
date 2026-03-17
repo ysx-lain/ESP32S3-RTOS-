@@ -112,17 +112,20 @@ void clock_task(void *pvParameters) {
 
 // ==================== 传感器读取任务 ====================
 void sensor_task(void *pvParameters) {
-    static float base_temp = 25.0f;
-    static float base_hum = 50.0f;
-    static float base_press = 1013.0f;
-    static int base_co2 = 400;
+    static float base_temp = 25.0f;      // 温度 ℃
+    static float base_hum = 50.0f;       // 湿度 %RH
+    static float base_press = 1013.0f;    // 气压 hPa
+    static int base_co2 = 420;           // CO2 浓度 ppm
+    static float base_ozone = 30.0f;     // 臭氧 O3 ppb
+    static float base_acetaldehyde = 5.0f; // 乙醛 C2H4O ppb
+    static float base_ethylene = 0.5f;    // 乙烯 C2H4 ppm
     static int counter = 0;
 
     for (;;) {
         // 模拟生成传感器数据，每次随机微小变化
         SensorReading_t reading;
         
-        // 温度：20-35 度之间随机游走
+        // 温度：20-35 ℃ 之间随机游走
         base_temp += ((rand() % 100) - 50) / 100.0f;
         if (base_temp < 20) base_temp = 20;
         if (base_temp > 35) base_temp = 35;
@@ -145,6 +148,24 @@ void sensor_task(void *pvParameters) {
         if (base_co2 < 400) base_co2 = 400;
         if (base_co2 > 2000) base_co2 = 2000;
         reading.co2 = base_co2;
+        
+        // 臭氧：0-100 ppb 之间随机游走
+        base_ozone += ((rand() % 100) - 50) / 10.0f;
+        if (base_ozone < 0) base_ozone = 0;
+        if (base_ozone > 100) base_ozone = 100;
+        reading.ozone = base_ozone;
+        
+        // 乙醛：0-50 ppb 之间随机游走
+        base_acetaldehyde += ((rand() % 100) - 50) / 100.0f;
+        if (base_acetaldehyde < 0) base_acetaldehyde = 0;
+        if (base_acetaldehyde > 50) base_acetaldehyde = 50;
+        reading.acetaldehyde = base_acetaldehyde;
+        
+        // 乙烯：0-5 ppm 之间随机游走
+        base_ethylene += ((rand() % 100) - 50) / 1000.0f;
+        if (base_ethylene < 0) base_ethylene = 0;
+        if (base_ethylene > 5) base_ethylene = 5;
+        reading.ethylene = base_ethylene;
         
         // 计数器递增
         counter++;

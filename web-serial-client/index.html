@@ -139,7 +139,7 @@
     </div>
 
     <div class="card">
-        <h3>最新传感器数据</h3>
+        <h3>串口接收数据（来自 ESP32）</h3>
         <div class="data" id="sensorData">
             <div class="sensor-item">
                 <div class="sensor-name">温度</div>
@@ -154,8 +154,20 @@
                 <div class="sensor-value" id="press">--<span class="sensor-unit">hPa</span></div>
             </div>
             <div class="sensor-item">
-                <div class="sensor-name">CO2</div>
+                <div class="sensor-name">CO₂</div>
                 <div class="sensor-value" id="co2">--<span class="sensor-unit">ppm</span></div>
+            </div>
+            <div class="sensor-item">
+                <div class="sensor-name">臭氧 (O₃)</div>
+                <div class="sensor-value" id="ozone">--<span class="sensor-unit">ppb</span></div>
+            </div>
+            <div class="sensor-item">
+                <div class="sensor-name">乙醛 (C₂H₄O)</div>
+                <div class="sensor-value" id="acetaldehyde">--<span class="sensor-unit">ppb</span></div>
+            </div>
+            <div class="sensor-item">
+                <div class="sensor-name">乙烯 (C₂H₄)</div>
+                <div class="sensor-value" id="ethylene">--<span class="sensor-unit">ppm</span></div>
             </div>
             <div class="sensor-item">
                 <div class="sensor-name">计数</div>
@@ -180,7 +192,7 @@
     </div>
 
     <div class="card">
-        <h3>网页模拟数据（无硬件时测试）</h3>
+        <h3>网页模拟数据（比对测试）</h3>
         <div class="controls">
             <button id="startSimulateBtn">开始模拟</button>
             <button id="stopSimulateBtn" disabled>停止模拟</button>
@@ -227,6 +239,9 @@
                 this.count = 0;
                 this.pressure = 0;
                 this.co2 = 0;
+                this.ozone = 0;
+                this.acetaldehyde = 0;
+                this.ethylene = 0;
                 this.timestamp = 0;
             }
 
@@ -239,7 +254,10 @@
                 reading.count = view.getInt32(8, true);
                 reading.pressure = view.getFloat32(12, true);
                 reading.co2 = view.getInt32(16, true);
-                reading.timestamp = view.getUint32(20, true);
+                reading.ozone = view.getFloat32(20, true);
+                reading.acetaldehyde = view.getFloat32(24, true);
+                reading.ethylene = view.getFloat32(28, true);
+                reading.timestamp = view.getUint32(32, true);
                 return reading;
             }
         }
@@ -250,7 +268,7 @@
         let totalPackets = 0;
         let errorPackets = 0;
         let startTime = null;
-        const expectedStructSize = 24; // sizeof(SensorReading) = 4*6 = 24 bytes
+        const expectedStructSize = 36; // sizeof(SensorReading) = 4*9 = 36 bytes
 
         // ==================== 网页端模拟传感器数据 ====================
         let simulateInterval = null;
@@ -347,10 +365,13 @@
             document.getElementById('hum').textContent = reading.humidity.toFixed(1);
             document.getElementById('press').textContent = reading.pressure.toFixed(1);
             document.getElementById('co2').textContent = reading.co2;
+            document.getElementById('ozone').textContent = reading.ozone.toFixed(1);
+            document.getElementById('acetaldehyde').textContent = reading.acetaldehyde.toFixed(1);
+            document.getElementById('ethylene').textContent = reading.ethylene.toFixed(2);
             document.getElementById('count').textContent = reading.count;
 
             const now = (Date.now() - startTime) / 1000;
-            addLog(`[${now.toFixed(1)}s] Temp=${reading.temperature.toFixed(1)}C Hum=${reading.humidity.toFixed(1)}% Press=${reading.pressure.toFixed(1)}hPa CO2=${reading.co2}ppm Count=${reading.count}`);
+            addLog(`[${now.toFixed(1)}s] Temp=${reading.temperature.toFixed(1)}C Hum=${reading.humidity.toFixed(1)}% Press=${reading.pressure.toFixed(1)}hPa CO2=${reading.co2}ppm O3=${reading.ozone.toFixed(1)}ppb`);
 
             updateStats();
         }
