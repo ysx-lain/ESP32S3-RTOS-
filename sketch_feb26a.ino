@@ -107,13 +107,13 @@ void page3() {
     bool bleConnected = BLEManager::isConnected();
     
     // 绘制标题
-    display.drawText(20, 15, "System Status", FONT_MEDIUM_SIZE, 0, 255, 255);
+    display.drawText(20, 15, "System Status", FONT_MEDIUM_SIZE, 255, 255, 255);
     
     // 显示 BLE 连接状态
     if (bleConnected) {
-        display.drawText(10, 35, "BLE: Connected", FONT_MEDIUM_SIZE, 0, 0, 255, 0);
+        display.drawText(10, 35, "BLE: Connected", FONT_MEDIUM_SIZE, 0, 255, 0);
     } else {
-        display.drawText(10, 35, "BLE: Disconnected", FONT_MEDIUM_SIZE, 0, 255, 0, 0);
+        display.drawText(10, 35, "BLE: Disconnected", FONT_MEDIUM_SIZE, 255, 0, 0);
     }
     
     // 显示运行时间
