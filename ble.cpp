@@ -105,7 +105,7 @@ void BLEManager::begin(const char* deviceName) {
     // 为发送特征添加 CCCD 描述符(UUID = 0x2902)
     // 新版 NimBLE 会自动添加，但某些版本需要手动添加
     // 这里使用兼容写法，不会重复添加
-    if (!_pTxCharacteristic->getDescriptorByUUID(NimBLEUUID((uint16_t)0x2902)) {
+    if (!_pTxCharacteristic->getDescriptorByUUID(NimBLEUUID((uint16_t)0x2902))) {
         NimBLEDescriptor* pDesc = new NimBLEDescriptor(
             NimBLEUUID((uint16_t)0x2902),
             NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE,
