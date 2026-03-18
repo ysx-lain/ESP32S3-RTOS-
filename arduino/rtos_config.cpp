@@ -205,10 +205,11 @@ void display_task(void *pvParameters) {
     }
 
     for (;;) {
+        // 超时 50ms 等待按键事件，这样可以定期刷新传感器
         ButtonEvent_t event;
+        bool haveEvent = xQueueReceive(xButtonEventQueue, &event, pdMS_TO_TICKS(50));
 
-        // 等待按键事件, 阻塞等待(无限超时)
-        if (xQueueReceive(xButtonEventQueue, &event, portMAX_DELAY)) {
+        if (haveEvent) {
             // 收到按键事件, 处理它
             bool wasScreenOff = !display.isScreenOn();
 
@@ -247,9 +248,24 @@ void display_task(void *pvParameters) {
             }
         }
 
-        // 检查自动息屏(即使没有按键事件也要定期检查)
-        // 这里每处理完一个按键事件就检查一次, 比轮询更高效
-        // 只有当距离上次检查已经过去了一定时间, 才需要检查
+        // 如果当前是传感器页面，定期刷新显示（数据一直在变）
+        if (currentPage == 0 && display.isScreenOn()) {
+            // 检查有没有新的传感器数据
+            SensorReading_t reading;
+            // 非阻塞读取，如果有新数据就刷新显示
+            while (xQueueReceive(xSensorDataQueue, &reading, 0)) {
+                // 循环读取，最后一个就是最新的，保存下来
+                // 这里我们直接用读取到的最新数据刷新显示
+                if (xSemaphoreTake(xDisplayMutex, pdMS_TO_TICKS(100))) {
+                    display.clear();
+                    page1();
+                    xSemaphoreGive(xDisplayMutex);
+                    break;
+                }
+            }
+        }
+
+        // 检查自动息屏
         static unsigned long lastCheck = 0;
         unsigned long now = xTaskGetTickCount() * portTICK_PERIOD_MS;
         if (display.isScreenOn() && (now - lastCheck > 1000)) {
