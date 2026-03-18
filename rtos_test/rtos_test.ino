@@ -55,7 +55,9 @@ void high_priority_task(void *pv) {
     for (int i = 0; i < TEST_ITERATIONS; i++) {
         // 获取互斥锁
         if (xSemaphoreTake(xTestMutex, portMAX_DELAY)) {
-            g_counter++;
+            int tmp = g_counter;
+            tmp++;
+            g_counter = tmp;
             Serial.printf("[HIGH] counter = %d → Running on Core %d\r\n", 
                          g_counter, xPortGetCoreID());
             xSemaphoreGive(xTestMutex);
@@ -76,7 +78,9 @@ void low_priority_task(void *pv) {
     for (int i = 0; i < TEST_ITERATIONS; i++) {
         // 获取互斥锁
         if (xSemaphoreTake(xTestMutex, portMAX_DELAY)) {
-            g_counter++;
+            int tmp = g_counter;
+            tmp++;
+            g_counter = tmp;
             Serial.printf("[LOW]  counter = %d → Running on Core %d\r\n", 
                          g_counter, xPortGetCoreID());
             xSemaphoreGive(xTestMutex);
