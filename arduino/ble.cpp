@@ -82,39 +82,25 @@ void BLEManager::CharCallbacks::onRead(NimBLECharacteristic* pCharacteristic) {
  * @brief 初始化 BLE 服务并开始广播
  * 
  * @param deviceName 广播的设备名称
- * @return true  初始化成功
- * @return false 初始化失败
  */
-bool BLEManager::begin(const char* deviceName) {
-    LOG_INFO("[BLE] Initializing BLE, device name: %s", deviceName);
+void BLEManager::begin(const char* deviceName) {
+    Serial.println("[BLE] Initializing...");
 
     // 初始化 NimBLE 协议栈
     NimBLEDevice::init(deviceName);
 
     // 创建服务器
     _pServer = NimBLEDevice::createServer();
-    if (!_pServer) {
-        LOG_ERROR("[BLE] Failed to create BLE server");
-        return false;
-    }
     _pServer->setCallbacks(new ServerCallbacks());
 
     // 创建服务
     NimBLEService* pService = _pServer->createService(SERVICE_UUID);
-    if (!pService) {
-        LOG_ERROR("[BLE] Failed to create BLE service");
-        return false;
-    }
 
     // 创建发送特征(Notify)
     _pTxCharacteristic = pService->createCharacteristic(
         CHARACTERISTIC_UUID_TX,
         NIMBLE_PROPERTY::NOTIFY
     );
-    if (!_pTxCharacteristic) {
-        LOG_ERROR("[BLE] Failed to create TX characteristic");
-        return false;
-    }
 
     // 为发送特征添加 CCCD 描述符(UUID = 0x2902)
     // 新版 NimBLE 会自动添加，但某些版本需要手动添加
@@ -133,35 +119,21 @@ bool BLEManager::begin(const char* deviceName) {
         CHARACTERISTIC_UUID_RX,
         NIMBLE_PROPERTY::WRITE
     );
-    if (!_pRxCharacteristic) {
-        LOG_ERROR("[BLE] Failed to create RX characteristic");
-        return false;
-    }
     _pRxCharacteristic->setCallbacks(new CharCallbacks());
 
     // 启动服务
     pService->start();
-    LOG_INFO("[BLE] BLE service started");
 
     // 配置广播 - 最基础版本，兼容所有 NimBLE 版本
     NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
-    if (!pAdvertising) {
-        LOG_ERROR("[BLE] Failed to get advertising");
-        return false;
-    }
     
     // 添加服务 UUID
     pAdvertising->addServiceUUID(SERVICE_UUID);
     
     // 开始广播
-    bool started = pAdvertising->start();
-    if (!started) {
-        LOG_ERROR("[BLE] Failed to start advertising");
-        return false;
-    }
+    pAdvertising->start();
 
-    LOG_INFO("[BLE] Advertising started successfully");
-    return true;
+    Serial.println("[BLE] Advertising started, name: " + String(deviceName));
 }
 
 /**
@@ -196,11 +168,6 @@ bool BLEManager::sendSensorData(uint8_t* data, size_t length) {
     _pTxCharacteristic->setValue(data, length);
     _pTxCharacteristic->notify();
     _lastSendTime = now;
-    
-    // 打印调试日志：发送了多少字节
-    Serial.print("[BLE] Sent binary: ");
-    Serial.print(length);
-    Serial.println(" bytes");
     return true;
 }
 
