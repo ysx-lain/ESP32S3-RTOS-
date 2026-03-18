@@ -226,9 +226,10 @@ void display_task(void *pvParameters) {
     }
 
     for (;;) {
-        // 超时 100ms 等待按键事件
+        // 超时 10ms 等待按键事件 → 这样传感器刷新更及时
+        // 10Hz 刷新正好每 100ms 刷新 10 次，响应按键也及时
         ButtonEvent_t event;
-        bool haveEvent = xQueueReceive(xButtonEventQueue, &event, pdMS_TO_TICKS(100));
+        bool haveEvent = xQueueReceive(xButtonEventQueue, &event, pdMS_TO_TICKS(10));
 
         if (haveEvent) {
             // 收到按键事件, 处理它

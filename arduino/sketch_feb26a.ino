@@ -83,16 +83,34 @@ void refreshTimeDisplay() {
 // ==================== 外部全局变量 ====================
 extern SensorReading_t latestSensorReading;
 
+// ======================================================
+// 屏幕尺寸: 宽度 160px × 高度 80px (横向)
+// 字体: FONT_MEDIUM = 7px宽 × 13px高
+// 行间距 = 13px + 2px = 15px
+// 左边标签宽度 = 45px，右边数值区域 = 110px
+// ======================================================
+#define ROW_HEIGHT   15    // 每行总高度
+#define LABEL_WIDTH  45    // 标签区域宽度
+#define VALUE_X      50    // 数值区域起始X
+
+// 页面1首次绘制：绘制所有标签+初始数值
+// Y坐标从 0 开始计算，完美放7行正好 7×15 = 105 → 80 不够，压缩行间距到 12px
+#undef ROW_HEIGHT
+#define ROW_HEIGHT   12    // 压缩行间距，7行正好 7×12=84，留一点边距正好放下
+
+const int row_y[7] = { 2, 14, 26, 38, 50, 62, 74 };  // 每行起始Y坐标
+const int clear_h = ROW_HEIGHT - 1;                   // 清除区域高度
+
 // 页面1首次绘制：绘制所有标签+初始数值
 void page1_init() {
     // 第一列绘制标签，数值位置留空，后续只更新数值
-    display.drawText(5,  10,  "Temp:",  FONT_MEDIUM_SIZE, 255, 255, 255);
-    display.drawText(5,  23,  "Hum:",   FONT_MEDIUM_SIZE, 255, 255, 255);
-    display.drawText(5,  36,  "Press:", FONT_MEDIUM_SIZE, 255, 255, 255);
-    display.drawText(5,  49,  "CO₂:",   FONT_MEDIUM_SIZE, 255, 255, 255);
-    display.drawText(5,  62,  "O₃:",   FONT_MEDIUM_SIZE, 255, 255, 255);
-    display.drawText(5,  75,  "C₂H₄O:", FONT_MEDIUM_SIZE, 255, 255, 255);
-    display.drawText(5,  88,  "C₂H₄:",  FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText( 5, row_y[0]+10,  "Temp:",  FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText( 5, row_y[1]+10,  "Hum:",   FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText( 5, row_y[2]+10,  "Press:", FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText( 5, row_y[3]+10,  "CO₂:",   FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText( 5, row_y[4]+10,  "O₃:",   FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText( 5, row_y[5]+10,  "C₂H₄O:", FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText( 5, row_y[6]+10,  "C₂H₄:",  FONT_MEDIUM_SIZE, 255, 255, 255);
 }
 
 // 页面1增量更新：只更新数值，不重绘标签，更快
@@ -105,15 +123,28 @@ void page1_update() {
         xSemaphoreGive(xSensorDataMutex);
     }
     
-    // 每行Y坐标固定，只在数值位置局部清除重绘
-    // 这样不用全屏清屏，快很多，不闪烁
-    display.fillRect(50,  8, 100, 14, 0, 0, 0);  display.drawSensor(50,  10, "Temp",  reading.temperature,  "C");
-    display.fillRect(50, 21, 100, 14, 0, 0, 0);  display.drawSensor(50,  23, "Hum",   reading.humidity,    "%");
-    display.fillRect(50, 34, 100, 14, 0, 0, 0);  display.drawSensor(50,  36, "Press", reading.pressure,  "hPa");
-    display.fillRect(50, 47, 100, 14, 0, 0, 0);  display.drawSensor(50,  49, "CO₂",   reading.co2,        "ppm");
-    display.fillRect(50, 60, 100, 14, 0, 0, 0);  display.drawSensor(50,  62, "O₃",   reading.ozone,      "ppb");
-    display.fillRect(50, 73, 100, 14, 0, 0, 0);  display.drawSensor(50,  75, "C₂H₄O", reading.acetaldehyde, "ppb");
-    display.fillRect(50, 86, 100, 14, 0, 0, 0);  display.drawSensor(50,  88, "C₂H₄",  reading.ethylene,   "ppm");
+    // 只清除数值区域，重绘最新数值
+    // 110px宽度足够放下 "xxx.x ℃"，完全放下
+    display.fillRect(VALUE_X, row_y[0], 105, clear_h, 0, 0, 0);
+    display.drawSensor(VALUE_X, row_y[0]+10, "Temp",  reading.temperature,  "C");
+    
+    display.fillRect(VALUE_X, row_y[1], 105, clear_h, 0, 0, 0);
+    display.drawSensor(VALUE_X, row_y[1]+10, "Hum",   reading.humidity,    "%");
+    
+    display.fillRect(VALUE_X, row_y[2], 105, clear_h, 0, 0, 0);
+    display.drawSensor(VALUE_X, row_y[2]+10, "Press", reading.pressure,  "hPa");
+    
+    display.fillRect(VALUE_X, row_y[3], 105, clear_h, 0, 0, 0);
+    display.drawSensor(VALUE_X, row_y[3]+10, "CO₂",   reading.co2,        "ppm");
+    
+    display.fillRect(VALUE_X, row_y[4], 105, clear_h, 0, 0, 0);
+    display.drawSensor(VALUE_X, row_y[4]+10, "O₃",   reading.ozone,      "ppb");
+    
+    display.fillRect(VALUE_X, row_y[5], 105, clear_h, 0, 0, 0);
+    display.drawSensor(VALUE_X, row_y[5]+10, "C₂H₄O", reading.acetaldehyde, "ppb");
+    
+    display.fillRect(VALUE_X, row_y[6], 105, clear_h, 0, 0, 0);
+    display.drawSensor(VALUE_X, row_y[6]+10, "C₂H₄",  reading.ethylene,   "ppm");
 }
 
 // ==================== 页面函数 ====================
