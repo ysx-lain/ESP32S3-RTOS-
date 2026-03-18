@@ -21,10 +21,15 @@
  *   3. sensor_task  - 传感器读取, 优先级 2
  *   4. display_task - 显示更新, 优先级 2
  *   5. ble_task     - BLE 通信, 优先级 3 (可选)
+ * 
+ * 页面分配(按键切换):
+ *   页面1 - 气体传感器数据(7路)
+ *   页面2 - ESP32 内存和工作状态(剩余堆内存等)
+ *   页面3 - 时钟/运行时间
  *
  * @author ysx
  * @date 2024-03-16
- * @version 4.0 (FreeRTOS 版本)
+ * @version 4.1 (FreeRTOS 版本)
  */
 
 #include <SPI.h>
@@ -77,6 +82,7 @@ void refreshTimeDisplay() {
 
 // ==================== 页面函数 ====================
 void page1() {
+    // 页面1: 气体传感器数据
     // 从传感器队列获取最新数据显示
     SensorReading_t reading;
     // 非阻塞读取最新数据, 持续读取直到队列为空, 保留最后一个(最新的)
@@ -95,33 +101,33 @@ void page1() {
 }
 
 void page2() {
-    // 运行时间页面:先绘制标题, 再显示当前时间
-    display.drawText(20, 20, "Uptime", FONT_LARGE_SIZE, 0, 255, 255);
-    refreshTimeDisplay();   // 立即显示当前时间(内部已处理局部清除)
+    // 页面2: ESP32 内存和工作状态
+    display.drawText(15, 15, "System Info", FONT_LARGE_SIZE, 0, 255, 255);
+    
+    // 获取堆内存信息
+    size_t freeHeap = xPortGetFreeHeapSize();
+    size_t minimumFreeHeap = xPortGetMinimumEverFreeHeapSize();
+    int freeKB = freeHeap / 1024;
+    int minFreeKB = minimumFreeHeap / 1024;
+    
+    // 获取当前运行核心
+    int coreId = xPortGetCoreID();
+    
+    char buffer[32];
+    snprintf(buffer, sizeof(buffer), "Free: %d KB", freeKB);
+    display.drawText(10, 35, buffer, FONT_MEDIUM_SIZE, 255, 255, 255);
+    
+    snprintf(buffer, sizeof(buffer), "MinFree: %d KB", minFreeKB);
+    display.drawText(10, 50, buffer, FONT_MEDIUM_SIZE, 255, 255, 255);
+    
+    snprintf(buffer, sizeof(buffer), "Running Core: %d", coreId);
+    display.drawText(10, 65, buffer, FONT_MEDIUM_SIZE, 255, 255, 255);
 }
 
-// ==================== 系统状态页面:显示 BLE 连接状态和系统信息
 void page3() {
-    unsigned long seconds = millis() / 1000;
-    unsigned long minutes = seconds / 60;
-    unsigned long hours = minutes / 60;
-    bool bleConnected = BLEManager::isConnected();
-    
-    display.drawText(20, 15, "System Status", FONT_MEDIUM_SIZE, 255, 255, 255);
-    
-    if (bleConnected) {
-        display.drawText(10, 35, "BLE: Connected", FONT_MEDIUM_SIZE, 0, 255, 0);
-    } else {
-        display.drawText(10, 35, "BLE: Disconnected", FONT_MEDIUM_SIZE, 255, 0, 0);
-    }
-    
-    char uptime[32];
-    snprintf(uptime, sizeof(uptime), "Uptime: %luh%lum", hours, minutes % 60);
-    display.drawText(10, 50, uptime, FONT_MEDIUM_SIZE, 255, 255, 255);
-    
-    char pageInfo[16];
-    snprintf(pageInfo, sizeof(pageInfo), "Page: %d/%d", currentPage + 1, PAGE_COUNT);
-    display.drawText(10, 65, pageInfo, FONT_MEDIUM_SIZE, 255, 255, 255);
+    // 页面3: 时钟/运行时间
+    display.drawText(20, 20, "Uptime", FONT_LARGE_SIZE, 0, 255, 255);
+    refreshTimeDisplay();   // 立即显示当前时间(内部已处理局部清除)
 }
 
 // ==================== BLE 回调(可选)====================
