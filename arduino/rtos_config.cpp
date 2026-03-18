@@ -243,7 +243,7 @@ void display_task(void *pvParameters) {
                     display.wake();
                     display.clear();
                     if (currentPage == 0) {
-                        page1();
+                        page1();  // page1() includes init
                     } else if (currentPage == 1) {
                         page2();
                     } else {
@@ -257,7 +257,7 @@ void display_task(void *pvParameters) {
                     Serial.println(currentPage);
                     display.clear();
                     if (currentPage == 0) {
-                        page1();
+                        page1();  // page1() includes init
                     } else if (currentPage == 1) {
                         page2();
                     } else {
@@ -269,11 +269,11 @@ void display_task(void *pvParameters) {
             }
         }
 
-        // 如果当前是传感器页面并且屏幕亮着，10Hz 刷新显示
+        // 如果当前是传感器页面并且屏幕亮着，10Hz 增量刷新数值
+        // 只更新数值，不重绘标签，不全屏清屏，快很多不闪烁
         if (currentPage == 0 && display.isScreenOn()) {
             if (xSemaphoreTake(xDisplayMutex, pdMS_TO_TICKS(100))) {
-                display.clear();
-                page1();
+                page1_update();
                 xSemaphoreGive(xDisplayMutex);
             }
         }

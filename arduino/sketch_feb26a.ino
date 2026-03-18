@@ -83,10 +83,20 @@ void refreshTimeDisplay() {
 // ==================== 外部全局变量 ====================
 extern SensorReading_t latestSensorReading;
 
-// ==================== 页面函数 ====================
-void page1() {
-    // 页面1: 气体传感器数据
-    // 直接使用全局最新数据，保证每次刷新都是最新的
+// 页面1首次绘制：绘制所有标签+初始数值
+void page1_init() {
+    // 第一列绘制标签，数值位置留空，后续只更新数值
+    display.drawText(5,  10,  "Temp:",  FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText(5,  23,  "Hum:",   FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText(5,  36,  "Press:", FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText(5,  49,  "CO₂:",   FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText(5,  62,  "O₃:",   FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText(5,  75,  "C₂H₄O:", FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText(5,  88,  "C₂H₄:",  FONT_MEDIUM_SIZE, 255, 255, 255);
+}
+
+// 页面1增量更新：只更新数值，不重绘标签，更快
+void page1_update() {
     SensorReading_t reading;
     
     // 读取最新数据（需要互斥锁保护）
@@ -95,14 +105,21 @@ void page1() {
         xSemaphoreGive(xSensorDataMutex);
     }
     
-    // 显示最新读取的传感器数据
-    display.Sensor(1, "Temp", reading.temperature, "C");
-    display.Sensor(2, "Hum",  reading.humidity,   "%");
-    display.Sensor(3, "Press", reading.pressure, "hPa");
-    display.Sensor(4, "CO₂",   reading.co2,  "ppm");
-    display.Sensor(5, "O₃",   reading.ozone,  "ppb");
-    display.Sensor(6, "C₂H₄O", reading.acetaldehyde, "ppb");
-    display.Sensor(7, "C₂H₄", reading.ethylene, "ppm");
+    // 每行Y坐标固定，只在数值位置局部清除重绘
+    // 这样不用全屏清屏，快很多，不闪烁
+    display.fillRect(50,  8, 100, 14, 0, 0, 0);  display.drawSensor(50,  10, "Temp",  reading.temperature,  "C");
+    display.fillRect(50, 21, 100, 14, 0, 0, 0);  display.drawSensor(50,  23, "Hum",   reading.humidity,    "%");
+    display.fillRect(50, 34, 100, 14, 0, 0, 0);  display.drawSensor(50,  36, "Press", reading.pressure,  "hPa");
+    display.fillRect(50, 47, 100, 14, 0, 0, 0);  display.drawSensor(50,  49, "CO₂",   reading.co2,        "ppm");
+    display.fillRect(50, 60, 100, 14, 0, 0, 0);  display.drawSensor(50,  62, "O₃",   reading.ozone,      "ppb");
+    display.fillRect(50, 73, 100, 14, 0, 0, 0);  display.drawSensor(50,  75, "C₂H₄O", reading.acetaldehyde, "ppb");
+    display.fillRect(50, 86, 100, 14, 0, 0, 0);  display.drawSensor(50,  88, "C₂H₄",  reading.ethylene,   "ppm");
+}
+
+// ==================== 页面函数 ====================
+void page1() {
+    page1_init();      // 首次打开页面：绘制标签
+    page1_update();   // 绘制初始数值
 }
 
 void page2() {
