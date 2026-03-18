@@ -12,13 +12,18 @@
 
 #include "Display.h"
 
-// 构造函数:初始化 Ucglib 对象, 保存背光引脚, 设置内部标志
+// 构造函数:初始化 Ucglib 对象(硬件 SPI), 保存背光引脚, 设置内部标志
+// 硬件 SPI: 参数顺序 cd (a0), cs, reset
 Display::Display(uint8_t sclk, uint8_t data, uint8_t cd, uint8_t cs, uint8_t reset, uint8_t blPin)
-    : ucg(sclk, data, cd, cs, reset), 
+    : ucg(cd, cs, reset), 
       screenOn(false), 
       lastActivityTime(0), 
       _initialized(false),
-      _blPin(blPin) {}
+      _blPin(blPin) {
+    // 硬件 SPI 使用 ESP32 硬件 SPI 控制器，CLK and MOSI 固定:
+    // CLK = GPIO18, MOSI = GPIO23 （ESP32 默认硬件 SPI引脚）
+    // 如果你的引脚不同，请修改引脚配置
+}
 
 bool Display::begin(uint8_t rotation) {
     ucg.begin(UCG_FONT_MODE_TRANSPARENT);

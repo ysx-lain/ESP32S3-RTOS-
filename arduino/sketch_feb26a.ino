@@ -1,9 +1,15 @@
 /**
- * @file ESP32S3-RTOS.ino
- * @brief 主程序:FreeRTOS 多任务版本
+ * @file sketch_feb26a.ino
+ * @brief 主程序:FreeRTOS 多任务版本 (硬件 SPI)
  * 
- * 硬件接线:
- *   - 屏幕:sclk=13, data=11, cd=9, cs=10, reset=8
+ * 硬件接线(ESP32S3 硬件 SPI):
+ *   - 屏幕 硬件 SPI 默认引脚:
+ *     SCLK = GPIO18 (硬件 SPI 固定，不能改)
+ *     MOSI  = GPIO23 (硬件 SPI 固定，不能改)
+ *   - 屏幕 自定义引脚:
+ *     dc/a0 = GPIO9
+ *     cs    = GPIO10
+ *     reset = GPIO8
  *   - 背光:GPIO12(高电平点亮)
  *   - 按键:GPIO2(接 GND, 内部上拉)
  * 
@@ -40,11 +46,18 @@
 #include "ble.h"      // BLE 模块已启用
 
 // ==================== 硬件引脚定义 ====================
+// 硬件 SPI 使用 ESP32S3 默认硬件 SPI 引脚，不可修改:
+//  SCLK = GPIO18
+//  MOSI = GPIO23
 #define BUTTON_PIN 2
 #define BL_PIN     12
+#define DC_PIN     9    // 命令/数据
+#define CS_PIN     10   // 片选
+#define RESET_PIN  8    // 复位
 
 // ==================== 全局对象 ====================
-Display display(13, 11, 9, 10, 8, BL_PIN);
+// 硬件 SPI 构造函数: Display(dc, cs, reset, blPin)
+Display display(DC_PIN, CS_PIN, RESET_PIN, BL_PIN);
 
 // ==================== 页面管理 ====================
 const int PAGE_COUNT = 3;
