@@ -79,6 +79,10 @@ typedef struct {
 // 新结构体大小 = 4*8 = 36 字节
 extern QueueHandle_t xSensorDataQueue;
 
+// ==================== 全局变量 ====================
+// 保存最新传感器数据，供显示任务 10Hz 刷新
+extern SensorReading_t latestSensorReading;
+
 // ==================== 函数声明 ====================
 void rtos_init(void);           // 初始化 RTOS:创建互斥锁, 队列, 任务
 void rtos_start(void);          // 启动所有任务(实际上创建后就启动了)
