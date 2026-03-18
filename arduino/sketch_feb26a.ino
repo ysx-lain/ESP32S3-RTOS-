@@ -80,14 +80,19 @@ void refreshTimeDisplay() {
     display.drawText(10, baselineY, buffer, FONT_MEDIUM_SIZE, 255, 255, 255);
 }
 
+// ==================== 外部全局变量 ====================
+extern SensorReading_t latestSensorReading;
+
 // ==================== 页面函数 ====================
 void page1() {
     // 页面1: 气体传感器数据
-    // 从传感器队列获取最新数据显示
+    // 直接使用全局最新数据，保证每次刷新都是最新的
     SensorReading_t reading;
-    // 非阻塞读取最新数据, 持续读取直到队列为空, 保留最后一个(最新的)
-    while (xQueueReceive(xSensorDataQueue, &reading, 0)) {
-        // 循环读取, 最后一个就是最新数据
+    
+    // 读取最新数据（需要互斥锁保护）
+    if (xSemaphoreTake(xSensorDataMutex, pdMS_TO_TICKS(100))) {
+        reading = latestSensorReading;
+        xSemaphoreGive(xSensorDataMutex);
     }
     
     // 显示最新读取的传感器数据

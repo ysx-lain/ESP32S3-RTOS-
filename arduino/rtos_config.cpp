@@ -179,7 +179,13 @@ void sensor_task(void *pvParameters) {
         // 时间戳
         reading.timestamp = millis();
 
-        // 将读取的数据发送到队列, 供显示任务和 BLE 任务使用
+        // 更新全局最新传感器数据（显示任务直接用这个刷新）
+        if (xSemaphoreTake(xSensorDataMutex, pdMS_TO_TICKS(100))) {
+            latestSensorReading = reading;
+            xSemaphoreGive(xSensorDataMutex);
+        }
+
+        // 将读取的数据发送到队列, 供 BLE 任务使用
         // 如果队列满, 覆盖旧数据(这里用阻塞等待 10ms)
         if (xQueueSend(xSensorDataQueue, &reading, pdMS_TO_TICKS(10))) {
             // 发送成功
@@ -191,8 +197,23 @@ void sensor_task(void *pvParameters) {
     vTaskDelete(nullptr);
 }
 
+// ==================== 全局变量：保存最新传感器数据 ====================
+// 显示任务需要直接读取最新数据来刷新
+SensorReading_t latestSensorReading;
+
 // ==================== 显示更新任务 ====================
 void display_task(void *pvParameters) {
+    // 初始化最新传感器数据为默认值
+    latestSensorReading.temperature = 25.0f;
+    latestSensorReading.humidity = 50.0f;
+    latestSensorReading.pressure = 1013.0f;
+    latestSensorReading.co2 = 420;
+    latestSensorReading.ozone = 30.0f;
+    latestSensorReading.acetaldehyde = 5.0f;
+    latestSensorReading.ethylene = 0.5f;
+    latestSensorReading.count = 0;
+    latestSensorReading.timestamp = millis();
+
     // 初始化:显示默认页面
     if (xSemaphoreTake(xDisplayMutex, portMAX_DELAY)) {
         display.clear();
@@ -205,9 +226,9 @@ void display_task(void *pvParameters) {
     }
 
     for (;;) {
-        // 超时 50ms 等待按键事件，这样可以定期刷新传感器
+        // 超时 100ms 等待按键事件
         ButtonEvent_t event;
-        bool haveEvent = xQueueReceive(xButtonEventQueue, &event, pdMS_TO_TICKS(50));
+        bool haveEvent = xQueueReceive(xButtonEventQueue, &event, pdMS_TO_TICKS(100));
 
         if (haveEvent) {
             // 收到按键事件, 处理它
@@ -248,20 +269,12 @@ void display_task(void *pvParameters) {
             }
         }
 
-        // 如果当前是传感器页面，定期刷新显示（数据一直在变）
+        // 如果当前是传感器页面并且屏幕亮着，10Hz 刷新显示
         if (currentPage == 0 && display.isScreenOn()) {
-            // 检查有没有新的传感器数据
-            SensorReading_t reading;
-            // 非阻塞读取，如果有新数据就刷新显示
-            while (xQueueReceive(xSensorDataQueue, &reading, 0)) {
-                // 循环读取，最后一个就是最新的，保存下来
-                // 这里我们直接用读取到的最新数据刷新显示
-                if (xSemaphoreTake(xDisplayMutex, pdMS_TO_TICKS(100))) {
-                    display.clear();
-                    page1();
-                    xSemaphoreGive(xDisplayMutex);
-                    break;
-                }
+            if (xSemaphoreTake(xDisplayMutex, pdMS_TO_TICKS(100))) {
+                display.clear();
+                page1();
+                xSemaphoreGive(xDisplayMutex);
             }
         }
 
