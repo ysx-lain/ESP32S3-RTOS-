@@ -83,6 +83,14 @@ extern QueueHandle_t xSensorDataQueue;
 // 保存最新传感器数据，供显示任务 10Hz 刷新
 extern SensorReading_t latestSensorReading;
 
+// ==================== 外部函数声明 ====================
+// page1() page2() page3() 定义在 sketch_feb26a.ino
+void page1();
+void page2();
+void page3();
+void page1_update();  // 传感器页面增量更新，定义在 sketch_feb26a.ino
+void refreshTimeDisplay();  // 刷新时间显示，定义在 sketch_feb26a.ino
+
 // ==================== 函数声明 ====================
 void rtos_init(void);           // 初始化 RTOS:创建互斥锁, 队列, 任务
 void rtos_start(void);          // 启动所有任务(实际上创建后就启动了)

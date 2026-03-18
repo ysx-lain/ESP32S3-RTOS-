@@ -87,15 +87,14 @@ private:
 
 public:
     /**
-     * @brief 构造函数
-     * @param sclk  SPI 时钟引脚
-     * @param data  SPI 数据引脚(MOSI)
-     * @param cd    命令/数据引脚(DC)
+     * @brief 构造函数 (硬件 SPI)
+     * @param cd    命令/数据引脚(DC/A0)
      * @param cs    片选引脚
      * @param reset 复位引脚
-     * @param blPin 背光控制引脚(默认使用 BL_PIN 宏, 但建议显式传入)
+     * @param blPin 背光控制引脚
+     * @note ESP32 硬件 SPI 固定引脚: SCLK=GPIO18, MOSI=GPIO23
      */
-    Display(uint8_t sclk, uint8_t data, uint8_t cd, uint8_t cs, uint8_t reset, uint8_t blPin);
+    Display(uint8_t cd, uint8_t cs, uint8_t reset, uint8_t blPin);
 
     /**
      * @brief 初始化屏幕, 设置旋转并点亮背光
