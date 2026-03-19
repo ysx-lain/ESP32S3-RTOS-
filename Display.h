@@ -87,7 +87,7 @@ private:
 
 public:
     /**
-     * @brief 构造函数 (硬件 SPI - 默认ESP32硬件引脚)
+     * @brief 构造函数 (硬件 SPI)
      * @param cd    命令/数据引脚(DC/A0)
      * @param cs    片选引脚
      * @param reset 复位引脚
@@ -95,18 +95,6 @@ public:
      * @note ESP32 硬件SPI固定引脚: SCLK=GPIO18, MOSI=GPIO23
      */
     Display(uint8_t cd, uint8_t cs, uint8_t reset, uint8_t blPin);
-
-    /**
-     * @brief 构造函数 (自定义SPI引脚)
-     * @param sclk  SPI时钟引脚
-     * @param data  SPI数据引脚(MOSI)
-     * @param cd    命令/数据引脚(DC/A0)
-     * @param cs    片选引脚
-     * @param reset 复位引脚
-     * @param blPin 背光控制引脚
-     * @note 用于需要自定义SPI引脚的情况
-     */
-    Display(uint8_t sclk, uint8_t data, uint8_t cd, uint8_t cs, uint8_t reset, uint8_t blPin);
 
     /**
      * @brief 初始化屏幕, 设置旋转并点亮背光
