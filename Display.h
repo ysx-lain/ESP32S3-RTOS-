@@ -9,7 +9,7 @@
  * @date 2024-03-19
  * @version 2.7
  * 
- * @change 2.7 - Ucglib硬件SPI只支持3参数，自定义引脚必须改用软件SPI
+ * @change 2.7 - 实现硬件SPI+自定义引脚，适配ESP32-S3 GPIO12/GPIO11
  */
 
 #ifndef DISPLAY_H
@@ -100,9 +100,6 @@ public:
      * @note 提前调用SPI.begin()自定义引脚，再进入Ucglib初始化，实现硬件SPI自定义引脚
      */
     Display(uint8_t sclk, uint8_t mosi, uint8_t cd, uint8_t cs, uint8_t reset, uint8_t blPin);
-
-private:
-    uint8_t _sclk, _mosi;  // 保存自定义SPI引脚，在begin()中初始化
 
     /**
      * @brief 初始化屏幕, 设置旋转并点亮背光

@@ -88,20 +88,6 @@ ST7789v_arduino::ST7789v_arduino(int8_t dc, int8_t rst, int8_t cs)
   _sid  = _sclk = -1;
 }
 
-// Constructor when using hardware SPI but with custom SID/MOSI and SCLK pins
-// For ESP32/ESP32S3 which support custom pins on hardware SPI
-ST7789v_arduino::ST7789v_arduino(int8_t sid, int8_t sclk, int8_t dc, int8_t rst, int8_t cs) 
-  : Adafruit_GFX(ST7789_TFTWIDTH, ST7789_TFTHEIGHT) {
-  _cs   = cs;
-  _dc   = dc;
-  _rst  = rst;
-  _sid  = sid;
-  _sclk = sclk;
-  _hwSPI = true;
-  _SPI9bit = false;
-  // On ESP32, we still use hardware SPI but with custom pins, SPI.begin() will handle it
-}
-
 inline void ST7789v_arduino::spiwrite(uint8_t c) 
 {
 
