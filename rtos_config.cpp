@@ -52,83 +52,80 @@ const int maxScrollOffset = 80; // 最大滚动不超过屏幕高度
 // ==================== 常量定义 ====================
 const unsigned long debounceTime = 200;  // 按键消抖时间(毫秒)
 
-// ==================== 按键扫描任务 ====================
-// 三个独立按键，分别功能:
-//  - BUTTON_PIN_PAGE → 切换页面
-//  - BUTTON_PIN_SCROLL_UP → 向上滚动
-//  - BUTTON_PIN_SCROLL_DOWN → 向下滚动
+// ==================== 按键事件处理任务 ====================
+// 不再轮询按键引脚，只处理队列中的按键事件
+// ISR 在检测到按键时会把事件发送到队列，这里只负责处理
 void button_task(void *pvParameters) {
-    // 初始化：读取初始状态
-    int lastStatePage = digitalRead(BUTTON_PIN_PAGE);
-    int lastStateUp = digitalRead(BUTTON_PIN_SCROLL_UP);
-    int lastStateDown = digitalRead(BUTTON_PIN_SCROLL_DOWN);
-
-    // 设置引脚模式：输入上拉
-    pinMode(BUTTON_PIN_PAGE, INPUT_PULLUP);
-    pinMode(BUTTON_PIN_SCROLL_UP, INPUT_PULLUP);
-    pinMode(BUTTON_PIN_SCROLL_DOWN, INPUT_PULLUP);
-
+    // 不需要初始化引脚，ISR 已经处理了
+    
     for (;;) { // 任务主循环
-        // 1. 检测页面切换按键（下降沿）
-        int buttonStatePage = digitalRead(BUTTON_PIN_PAGE);
-        if (buttonStatePage == LOW && lastStatePage == HIGH) {
-            unsigned long now = xTaskGetTickCount() * portTICK_PERIOD_MS;
-            if (now - lastButtonPress > debounceTime) {
-                lastButtonPress = now;
-                // 发送页面切换事件：isLongPress = false 表示切换页面
-                ButtonEvent_t event;
-                event.timestamp = now;
-                event.isLongPress = false; // false = 切换页面
-                xQueueSend(xButtonEventQueue, &event, 0);
-            }
-        }
-        lastStatePage = buttonStatePage;
+        // 等待按键事件（阻塞等待，不需要轮询）
+        // ISR 会通过队列唤醒这个任务
+        ButtonEvent_t event;
+        if (xQueueReceive(xButtonEventQueue, &event, portMAX_DELAY)) {
+            
+            // 处理按键事件（这里和原来的逻辑一样）
+            bool wasScreenOff = !display.isScreenOn();
 
-        // 2. 检测向上滚动按键（下降沿）
-        int buttonStateUp = digitalRead(BUTTON_PIN_SCROLL_UP);
-        if (buttonStateUp == LOW && lastStateUp == HIGH) {
-            unsigned long now = xTaskGetTickCount() * portTICK_PERIOD_MS;
-            if (now - lastButtonPress > debounceTime) {
-                lastButtonPress = now;
-                // 向上滚动：直接修改偏移，发送重绘事件
-                if (scrollOffset > 0) {
-                    scrollOffset -= scrollStep;
-                    if (scrollOffset < 0) scrollOffset = 0;
-                    // 发送事件触发重绘
-                    ButtonEvent_t event;
-                    event.timestamp = now;
-                    event.isLongPress = true; // true = 向上滚动
-                    xQueueSend(xButtonEventQueue, &event, 0);
+            // 更新活动时间(用于自动息屏)
+            if (xSemaphoreTake(xDisplayMutex, pdMS_TO_TICKS(100))) {
+                display.updateActivity();
+
+                if (wasScreenOff) {
+                    // 唤醒屏幕，重绘当前页面
+                    display.wake();
+                    scrollOffset = 0; // 唤醒重置滚动
+                    display.clear();
+                    if (currentPage == 0) {
+                        page1();
+                    } else if (currentPage == 1) {
+                        page2();
+                    } else {
+                        page3();
+                    }
+                    Serial.println("Screen woken up");
+                } else {
+                    // 根据事件类型处理：
+                    // - event.isLongPress = true  → 向上滚动
+                    // - event.isLongPress = false → 如果滚动偏移为0，则切换页面；否则向下滚动
+                    if (event.isLongPress) {
+                        // 向上滚动
+                        if (scrollOffset > 0) {
+                            scrollOffset -= scrollStep;
+                            if (scrollOffset < 0) scrollOffset = 0;
+                        }
+                    } else {
+                        // 判断：是页面切换还是向下滚动
+                        if (scrollOffset == 0) {
+                            // 滚动偏移为0 → 切换页面
+                            currentPage = (currentPage + 1) % PAGE_COUNT;
+                            scrollOffset = 0; // 切换页面重置滚动偏移
+                        } else {
+                            // 滚动偏移不为0 → 向下滚动
+                            if (scrollOffset < maxScrollOffset) {
+                                scrollOffset += scrollStep;
+                                if (scrollOffset > maxScrollOffset) scrollOffset = maxScrollOffset;
+                            }
+                        }
+                    }
+                    
+                    // 重绘当前页面
+                    display.clear();
+                    if (currentPage == 0) {
+                        page1();
+                    } else if (currentPage == 1) {
+                        page2();
+                    } else {
+                        page3();
+                    }
+                    Serial.printf("currentPage: %d, scrollOffset: %d\r\n", currentPage, scrollOffset);
                 }
+
+                xSemaphoreGive(xDisplayMutex);
             }
         }
-        lastStateUp = buttonStateUp;
-
-        // 3. 检测向下滚动按键（下降沿）
-        int buttonStateDown = digitalRead(BUTTON_PIN_SCROLL_DOWN);
-        if (buttonStateDown == LOW && lastStateDown == HIGH) {
-            unsigned long now = xTaskGetTickCount() * portTICK_PERIOD_MS;
-            if (now - lastButtonPress > debounceTime) {
-                lastButtonPress = now;
-                // 向下滚动：直接修改偏移，发送重绘事件
-                if (scrollOffset < maxScrollOffset) {
-                    scrollOffset += scrollStep;
-                    if (scrollOffset > maxScrollOffset) scrollOffset = maxScrollOffset;
-                    // 发送事件触发重绘
-                    ButtonEvent_t event;
-                    event.timestamp = now;
-                    event.isLongPress = false; // 复用isLongPress = false 表示向下滚动
-                    xQueueSend(xButtonEventQueue, &event, 0);
-                }
-            }
-        }
-        lastStateDown = buttonStateDown;
-
-        // 延时，让出CPU
-        vTaskDelay(pdMS_TO_TICKS(INTERVAL_BUTTON));
     }
 
-    // 不会走到这里，如果退出要删除自己
     vTaskDelete(nullptr);
 }
 

@@ -95,6 +95,12 @@ void refreshTimeDisplay();  // 刷新时间显示，定义在 sketch_feb26a.ino
 // ==================== 函数声明 ====================
 void rtos_init(void);           // 初始化 RTOS:创建互斥锁, 队列, 任务
 void rtos_start(void);          // 启动所有任务(实际上创建后就启动了)
+
+// ==================== 中断服务例程(ISR)声明 ====================
+// 按键中断触发：下降沿触发
+void IRAM_ATTR button_isr();
+
+// ==================== 任务函数声明 ====================
 void button_task(void *pvParameters);
 void clock_task(void *pvParameters);
 void sensor_task(void *pvParameters);

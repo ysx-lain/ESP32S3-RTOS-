@@ -232,10 +232,21 @@ void setup()
     BLEManager::begin("ESP32-S3_Sensor");
     // BLEManager::onReceiveData(onBLECommand);
 
+    // ========== 注册按键中断 (三个独立按键) ==========
+    // 设置引脚模式：输入上拉
+    pinMode(BUTTON_PIN_PAGE, INPUT_PULLUP);
+    pinMode(BUTTON_PIN_SCROLL_UP, INPUT_PULLUP);
+    pinMode(BUTTON_PIN_SCROLL_DOWN, INPUT_PULLUP);
+
+    // 注册中断：下降沿触发
+    attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_PAGE), button_isr_page, FALLING);
+    attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_SCROLL_UP), button_isr_up, FALLING);
+    attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_SCROLL_DOWN), button_isr_down, FALLING);
+
     // 初始化 FreeRTOS:创建互斥锁、队列、所有任务
     rtos_init();
 
-    Serial.println("=== System ready (FreeRTOS multi-task mode ===");
+    Serial.println("=== System ready (FreeRTOS multi-task mode with interrupts ===");
 }
 
 // ==================== 主循环 ====================
@@ -244,4 +255,87 @@ void setup()
 void loop() {
     // 无事可做, 睡眠让出CPU
     vTaskDelay(pdMS_TO_TICKS(1000));
+}
+
+// ==================== 按键中断服务例程(ISR) ====================
+// 三个独立按键分别触发，在ISR中设置标志位并通知FreeRTOS任务
+
+extern QueueHandle_t xButtonEventQueue;
+
+// ========== 页面切换按键 ISR ==========
+void IRAM_ATTR button_isr_page() {
+    static unsigned long lastTriggerTime = 0;
+    unsigned long now = millis();
+    
+    // 消抖：200ms内只触发一次
+    if (now - lastTriggerTime < 200) {
+        return;
+    }
+    lastTriggerTime = now;
+    
+    // 发送页面切换事件：isLongPress = false
+    ButtonEvent_t event;
+    event.timestamp = now;
+    event.isLongPress = false;
+    
+    // 非阻塞发送
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xQueueSendFromISR(xButtonEventQueue, &event, &xHigherPriorityTaskWoken);
+    
+    // 如果唤醒了高优先级任务，请求上下文切换
+    if (xHigherPriorityTaskWoken == pdTRUE) {
+        portYIELD_FROM_ISR();
+    }
+}
+
+// ========== 向上滚动按键 ISR ==========
+void IRAM_ATTR button_isr_up() {
+    static unsigned long lastTriggerTime = 0;
+    unsigned long now = millis();
+    
+    // 消抖：200ms内只触发一次
+    if (now - lastTriggerTime < 200) {
+        return;
+    }
+    lastTriggerTime = now;
+    
+    // 发送向上滚动事件：isLongPress = true
+    ButtonEvent_t event;
+    event.timestamp = now;
+    event.isLongPress = true;
+    
+    // 非阻塞发送
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xQueueSendFromISR(xButtonEventQueue, &event, &xHigherPriorityTaskWoken);
+    
+    // 如果唤醒了高优先级任务，请求上下文切换
+    if (xHigherPriorityTaskWoken == pdTRUE) {
+        portYIELD_FROM_ISR();
+    }
+}
+
+// ========== 向下滚动按键 ISR ==========
+void IRAM_ATTR button_isr_down() {
+    static unsigned long lastTriggerTime = 0;
+    unsigned long now = millis();
+    
+    // 消抖：200ms内只触发一次
+    if (now - lastTriggerTime < 200) {
+        return;
+    }
+    lastTriggerTime = now;
+    
+    // 发送向下滚动事件：isLongPress = false（复用字段）
+    ButtonEvent_t event;
+    event.timestamp = now;
+    event.isLongPress = false;
+    
+    // 非阻塞发送
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xQueueSendFromISR(xButtonEventQueue, &event, &xHigherPriorityTaskWoken);
+    
+    // 如果唤醒了高优先级任务，请求上下文切换
+    if (xHigherPriorityTaskWoken == pdTRUE) {
+        portYIELD_FROM_ISR();
+    }
 }
