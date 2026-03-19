@@ -61,7 +61,7 @@ extern SemaphoreHandle_t xSensorDataMutex;
 // 按键事件队列:发送按键按下事件到显示任务
 typedef struct {
     unsigned long timestamp;
-    bool isLongPress;
+    bool isLongPress; // false=短按(下滚), true=长按(上滚)
 } ButtonEvent_t;
 extern QueueHandle_t xButtonEventQueue;
 

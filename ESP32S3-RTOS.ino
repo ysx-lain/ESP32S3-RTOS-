@@ -83,7 +83,7 @@ void refreshTimeDisplay() {
 
     // 中号字体(7x13)的高度为13像素, 基线y=50
     const int fontHeight = 13;
-    const int baselineY = 50;
+    const int baselineY = 50 + scrollOffset;  // 加上滚动偏移
     const int clearX = 10;
     const int clearY = baselineY - fontHeight;   // 文本顶部坐标
     const int clearW = 150;                       // 足够宽覆盖整个字符串
@@ -115,18 +115,20 @@ const int row_y[7] = { 2, 14, 26, 38, 50, 62, 74 };  // 每行起始Y坐标
 const int clear_h = ROW_HEIGHT - 1;                   // 清除区域高度
 
 // 页面1首次绘制：绘制所有标签+初始数值
+// 所有y坐标加上scrollOffset，支持滚动
 void page1_init() {
     // 第一列绘制标签，数值位置留空，后续只更新数值
-    display.drawText( 5, row_y[0]+10,  "Temp:",  FONT_MEDIUM_SIZE, 255, 255, 255);
-    display.drawText( 5, row_y[1]+10,  "Hum:",   FONT_MEDIUM_SIZE, 255, 255, 255);
-    display.drawText( 5, row_y[2]+10,  "Press:", FONT_MEDIUM_SIZE, 255, 255, 255);
-    display.drawText( 5, row_y[3]+10,  "CO₂:",   FONT_MEDIUM_SIZE, 255, 255, 255);
-    display.drawText( 5, row_y[4]+10,  "O₃:",   FONT_MEDIUM_SIZE, 255, 255, 255);
-    display.drawText( 5, row_y[5]+10,  "C₂H₄O:", FONT_MEDIUM_SIZE, 255, 255, 255);
-    display.drawText( 5, row_y[6]+10,  "C₂H₄:",  FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText( 5, (row_y[0]+scrollOffset)+10,  "Temp:",  FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText( 5, (row_y[1]+scrollOffset)+10,  "Hum:",   FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText( 5, (row_y[2]+scrollOffset)+10,  "Press:", FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText( 5, (row_y[3]+scrollOffset)+10,  "CO₂:",   FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText( 5, (row_y[4]+scrollOffset)+10,  "O₃:",   FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText( 5, (row_y[5]+scrollOffset)+10,  "C₂H₄O:", FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText( 5, (row_y[6]+scrollOffset)+10,  "C₂H₄:",  FONT_MEDIUM_SIZE, 255, 255, 255);
 }
 
 // 页面1增量更新：只更新数值，不重绘标签，更快
+// 所有y坐标加上scrollOffset，支持滚动
 void page1_update() {
     SensorReading_t reading;
     
@@ -138,26 +140,26 @@ void page1_update() {
     
     // 只清除数值区域，重绘最新数值
     // 110px宽度足够放下 "xxx.x ℃"，完全放下
-    display.fillRect(VALUE_X, row_y[0], 105, clear_h, 0, 0, 0);
-    display.drawSensor(VALUE_X, row_y[0]+10, "Temp",  reading.temperature,  "C");
+    display.fillRect(VALUE_X, row_y[0]+scrollOffset, 105, clear_h, 0, 0, 0);
+    display.drawSensor(VALUE_X, (row_y[0]+scrollOffset)+10, "Temp",  reading.temperature,  "C");
     
-    display.fillRect(VALUE_X, row_y[1], 105, clear_h, 0, 0, 0);
-    display.drawSensor(VALUE_X, row_y[1]+10, "Hum",   reading.humidity,    "%");
+    display.fillRect(VALUE_X, row_y[1]+scrollOffset, 105, clear_h, 0, 0, 0);
+    display.drawSensor(VALUE_X, (row_y[1]+scrollOffset)+10, "Hum",   reading.humidity,    "%");
     
-    display.fillRect(VALUE_X, row_y[2], 105, clear_h, 0, 0, 0);
-    display.drawSensor(VALUE_X, row_y[2]+10, "Press", reading.pressure,  "hPa");
+    display.fillRect(VALUE_X, row_y[2]+scrollOffset, 105, clear_h, 0, 0, 0);
+    display.drawSensor(VALUE_X, (row_y[2]+scrollOffset)+10, "Press", reading.pressure,  "hPa");
     
-    display.fillRect(VALUE_X, row_y[3], 105, clear_h, 0, 0, 0);
-    display.drawSensor(VALUE_X, row_y[3]+10, "CO₂",   reading.co2,        "ppm");
+    display.fillRect(VALUE_X, row_y[3]+scrollOffset, 105, clear_h, 0, 0, 0);
+    display.drawSensor(VALUE_X, (row_y[3]+scrollOffset)+10, "CO₂",   reading.co2,        "ppm");
     
-    display.fillRect(VALUE_X, row_y[4], 105, clear_h, 0, 0, 0);
-    display.drawSensor(VALUE_X, row_y[4]+10, "O₃",   reading.ozone,      "ppb");
+    display.fillRect(VALUE_X, row_y[4]+scrollOffset, 105, clear_h, 0, 0, 0);
+    display.drawSensor(VALUE_X, (row_y[4]+scrollOffset)+10, "O₃",   reading.ozone,      "ppb");
     
-    display.fillRect(VALUE_X, row_y[5], 105, clear_h, 0, 0, 0);
-    display.drawSensor(VALUE_X, row_y[5]+10, "C₂H₄O", reading.acetaldehyde, "ppb");
+    display.fillRect(VALUE_X, row_y[5]+scrollOffset, 105, clear_h, 0, 0, 0);
+    display.drawSensor(VALUE_X, (row_y[5]+scrollOffset)+10, "C₂H₄O", reading.acetaldehyde, "ppb");
     
-    display.fillRect(VALUE_X, row_y[6], 105, clear_h, 0, 0, 0);
-    display.drawSensor(VALUE_X, row_y[6]+10, "C₂H₄",  reading.ethylene,   "ppm");
+    display.fillRect(VALUE_X, row_y[6]+scrollOffset, 105, clear_h, 0, 0, 0);
+    display.drawSensor(VALUE_X, (row_y[6]+scrollOffset)+10, "C₂H₄",  reading.ethylene,   "ppm");
 }
 
 // ==================== 页面函数 ====================
@@ -168,7 +170,8 @@ void page1() {
 
 void page2() {
     // 页面2: ESP32 内存和工作状态
-    display.drawText(15, 15, "System Info", FONT_LARGE_SIZE, 0, 255, 255);
+    // 所有y坐标加上scrollOffset，支持滚动
+    display.drawText(15, 15 + scrollOffset, "System Info", FONT_LARGE_SIZE, 0, 255, 255);
     
     // 获取堆内存信息
     size_t freeHeap = xPortGetFreeHeapSize();
@@ -181,19 +184,19 @@ void page2() {
     
     char buffer[32];
     snprintf(buffer, sizeof(buffer), "Free: %d KB", freeKB);
-    display.drawText(10, 35, buffer, FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText(10, 35 + scrollOffset, buffer, FONT_MEDIUM_SIZE, 255, 255, 255);
     
     snprintf(buffer, sizeof(buffer), "MinFree: %d KB", minFreeKB);
-    display.drawText(10, 50, buffer, FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText(10, 50 + scrollOffset, buffer, FONT_MEDIUM_SIZE, 255, 255, 255);
     
     snprintf(buffer, sizeof(buffer), "Running Core: %d", coreId);
-    display.drawText(10, 65, buffer, FONT_MEDIUM_SIZE, 255, 255, 255);
+    display.drawText(10, 65 + scrollOffset, buffer, FONT_MEDIUM_SIZE, 255, 255, 255);
 }
 
 void page3() {
     // 页面3: 时钟/运行时间
-    display.drawText(20, 20, "Uptime", FONT_LARGE_SIZE, 0, 255, 255);
-    refreshTimeDisplay();   // 立即显示当前时间(内部已处理局部清除)
+    display.drawText(20, 20 + scrollOffset, "Uptime", FONT_LARGE_SIZE, 0, 255, 255);
+    refreshTimeDisplay();   // 立即显示当前时间(内部已处理局部清除，已经加了scrollOffset)
 }
 
 // ==================== BLE 回调(可选)====================

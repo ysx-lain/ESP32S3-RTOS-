@@ -47,30 +47,43 @@ extern const int PAGE_COUNT;
 const unsigned long debounceTime = 200;  // 按键消抖时间(毫秒)
 
 // ==================== 按键扫描任务 ====================
+// 短按 → 下滚一行，长按 → 上滚一行
 void button_task(void *pvParameters) {
     const int buttonPin = BUTTON_PIN;
     pinMode(buttonPin, INPUT_PULLUP);
     int lastButtonState = HIGH;
+    unsigned long pressStartTime = 0;
 
     for (;;) { // 任务主循环
         int buttonState = digitalRead(buttonPin);
 
         // 检测按键按下(下降沿)
         if (buttonState == LOW && lastButtonState == HIGH) {
+            pressStartTime = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        }
+
+        // 检测按键释放(上升沿)
+        if (buttonState == HIGH && lastButtonState == LOW) {
             unsigned long now = xTaskGetTickCount() * portTICK_PERIOD_MS;
+            unsigned long duration = now - pressStartTime;
 
             // 消抖检测
-            if (now - lastButtonPress > debounceTime) {
-                lastButtonPress = now;
-
-                // 发送按键事件到显示任务
-                ButtonEvent_t event;
-                event.timestamp = now;
-                event.isLongPress = false; // 这里只检测短按, 可扩展长按
-
-                // 非阻塞发送, 如果队列满就丢弃(不等待)
-                xQueueSend(xButtonEventQueue, &event, 0);
+            if (duration < debounceTime) {
+                // 噪音，忽略
+                lastButtonState = buttonState;
+                vTaskDelay(pdMS_TO_TICKS(INTERVAL_BUTTON));
+                continue;
             }
+
+            lastButtonPress = now;
+
+            // 发送按键事件到显示任务
+            ButtonEvent_t event;
+            event.timestamp = now;
+            event.isLongPress = (duration >= 500); // 大于500ms算长按
+
+            // 非阻塞发送, 如果队列满就丢弃(不等待)
+            xQueueSend(xButtonEventQueue, &event, 0);
         }
 
         lastButtonState = buttonState;
@@ -201,6 +214,12 @@ void sensor_task(void *pvParameters) {
 // 显示任务需要直接读取最新数据来刷新
 SensorReading_t latestSensorReading;
 
+// ==================== 滚动相关 ====================
+// 针对80px高度屏幕，内容放不下，支持按键滚动
+int scrollOffset = 0;
+const int scrollStep = 10;      // 每次滚动10像素
+const int maxScrollOffset = 80; // 最大滚动不超过屏幕高度
+
 // ==================== 显示更新任务 ====================
 void display_task(void *pvParameters) {
     // 初始化最新传感器数据为默认值
@@ -242,6 +261,7 @@ void display_task(void *pvParameters) {
                 if (wasScreenOff) {
                     // 唤醒屏幕, 重绘当前页面
                     display.wake();
+                    scrollOffset = 0; // 唤醒重置滚动
                     display.clear();
                     if (currentPage == 0) {
                         page1();  // page1() includes init
@@ -252,13 +272,25 @@ void display_task(void *pvParameters) {
                     }
                     Serial.println("Screen woken up");
                 } else {
-                    // 切换页面
-                    currentPage = (currentPage + 1) % PAGE_COUNT;
-                    Serial.print("Switched to page: ");
-                    Serial.println(currentPage);
+                    // 短按 = 下滚，长按 = 上滚
+                    if (event.isLongPress) {
+                        // 上滚
+                        if (scrollOffset > 0) {
+                            scrollOffset -= scrollStep;
+                            if (scrollOffset < 0) scrollOffset = 0;
+                        }
+                    } else {
+                        // 下滚
+                        if (scrollOffset < maxScrollOffset) {
+                            scrollOffset += scrollStep;
+                            if (scrollOffset > maxScrollOffset) scrollOffset = maxScrollOffset;
+                        }
+                    }
+                    // 滚动完重绘当前页面，应用新偏移
+                    Serial.printf("Scroll offset: %d\r\n", scrollOffset);
                     display.clear();
                     if (currentPage == 0) {
-                        page1();  // page1() includes init
+                        page1();
                     } else if (currentPage == 1) {
                         page2();
                     } else {
