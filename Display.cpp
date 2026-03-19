@@ -25,6 +25,11 @@ Display::Display(uint8_t sclk, uint8_t mosi, uint8_t cd, uint8_t cs, uint8_t res
 
 bool Display::begin(uint8_t rotation) {
     ucg.begin(UCG_FONT_MODE_TRANSPARENT);
+    
+    // 针对 80x160 ST7735 设置正确的显存偏移
+    // 默认128x160偏移不对，80x160需要x-start=26, y-start=1
+    ucg_set_offset(ucg_ptr, 26, 1);
+    
     if (rotation == 1) ucg.setRotate90();
     else if (rotation == 2) ucg.setRotate180();
     else if (rotation == 3) ucg.setRotate270();
