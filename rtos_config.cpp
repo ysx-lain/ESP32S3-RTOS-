@@ -270,10 +270,11 @@ void display_task(void *pvParameters) {
             }
         }
 
-        // 如果当前是传感器页面并且屏幕亮着，10Hz 增量刷新数值
+        // 如果当前是传感器页面并且屏幕亮着，增量刷新数值
         // 只更新数值，不重绘标签，不全屏清屏，快很多不闪烁
+        // 用短超时，不让按键事件等太久，保证响应及时
         if (currentPage == 0 && display.isScreenOn()) {
-            if (xSemaphoreTake(xDisplayMutex, pdMS_TO_TICKS(100))) {
+            if (xSemaphoreTake(xDisplayMutex, pdMS_TO_TICKS(10))) {
                 page1_update();
                 xSemaphoreGive(xDisplayMutex);
             }

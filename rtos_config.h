@@ -24,11 +24,12 @@
 #include <freertos/queue.h>
 
 // ==================== 任务优先级定义 (0-24, 数字越大优先级越高) ====================
-#define TASK_PRIORITY_BUTTON    1    // 按键扫描任务优先级
-#define TASK_PRIORITY_CLOCK     1    // 时间更新任务优先级
-#define TASK_PRIORITY_SENSOR    2    // 传感器读取任务优先级
+// 按键必须高优先级，保证及时响应，否则用户操作没反应
+#define TASK_PRIORITY_BUTTON    3    // 按键扫描任务优先级 (最高，保证及时响应)
+#define TASK_PRIORITY_BLE       2    // BLE 通信任务优先级
 #define TASK_PRIORITY_DISPLAY   2    // 屏幕显示任务优先级
-#define TASK_PRIORITY_BLE       3    // BLE 通信任务优先级
+#define TASK_PRIORITY_SENSOR    1    // 传感器读取任务优先级 (低，不抢按键响应)
+#define TASK_PRIORITY_CLOCK     1    // 时间更新任务优先级 (低，定时更新)
 
 // ==================== 任务栈大小定义 (单位:字, 每个字 4 字节) ====================
 #define TASK_STACK_BUTTON      2048  // 按键任务栈 (8KB)
@@ -40,8 +41,8 @@
 // ==================== 任务轮询间隔 (毫秒) ====================
 #define INTERVAL_BUTTON        10    // 按键扫描间隔 (10ms) - 响应及时
 #define INTERVAL_CLOCK         1000  // 时间更新间隔 (1秒)
-#define INTERVAL_SENSOR        100   // 传感器读取间隔 (0.1秒 = 100ms) - 更快更新
-#define INTERVAL_BLE            100   // BLE 数据发送间隔 (0.1秒 = 100ms)
+#define INTERVAL_SENSOR        500   // 传感器读取间隔 (0.5秒 = 500ms) - 减少抢锁，不影响按键响应
+#define INTERVAL_BLE            500   // BLE 数据发送间隔 (0.5秒 = 500ms)
 
 // ==================== 任务句柄 (用于任务管理) ====================
 extern TaskHandle_t xButtonTaskHandle;
