@@ -215,6 +215,10 @@ void setup()
     // 硬件引脚初始化
     pinMode(BUTTON_PIN, INPUT_PULLUP);
 
+    // !!! 关键：提前初始化SPI，设置自定义引脚SCLK=GPIO12, MOSI=GPIO11
+    // MISO不用设为-1，CS由Ucglib控制这里也设为-1
+    SPI.begin(SCLK_PIN, -1, MOSI_PIN, -1);
+
     // 初始化屏幕
     if (!display.begin(1)) {
         Serial.println("Display init failed!");
