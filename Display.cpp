@@ -170,14 +170,13 @@ void Display::updateActivity() {
 }
 
 void Display::checkSleep(unsigned long timeout) {
-    // 只要调用checkSleep说明屏幕还是亮着的，更新活动时间
-    // 这样不管在哪个页面，只要屏幕亮着就会一直更新，不会误息屏
-    if (screenOn) {
-        lastActivityTime = millis();
-        if (millis() - lastActivityTime >= timeout) {
-            sleep();
-        }
-    }
+    // 自动息屏功能已禁用，屏幕常亮
+    // if (screenOn) {
+    //     lastActivityTime = millis();
+    //     if (millis() - lastActivityTime >= timeout) {
+    //         sleep();
+    //     }
+    // }
 }
 
 void Display::drawSensor(int x, int y, const char* name, double value, const char* unit,
