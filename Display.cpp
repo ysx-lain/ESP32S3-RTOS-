@@ -12,15 +12,15 @@
 
 #include "Display.h"
 
-// 构造函数:初始化 Ucglib 对象(软件 SPI), 保存背光引脚
-// 支持自定义SCLK/MOSI引脚，适配不同ESP32-S3开发板
+// 构造函数:初始化 Ucglib 对象(硬件 SPI), 保存背光引脚
+// ESP32硬件SPI支持自定义引脚，这里使用SPI2: SCLK=GPIO12, MOSI=GPIO11
 Display::Display(uint8_t sclk, uint8_t mosi, uint8_t cd, uint8_t cs, uint8_t reset, uint8_t blPin)
     : ucg(sclk, mosi, cd, cs, reset), 
       screenOn(false), 
       lastActivityTime(0), 
       _initialized(false),
       _blPin(blPin) {
-    // 软件SPI支持自定义引脚，这里使用传入的sclk和mosi
+    // 硬件SPI依然支持自定义引脚，由ESP32控制器负责通信，比软件SPI快
 }
 
 bool Display::begin(uint8_t rotation) {

@@ -9,7 +9,7 @@
  * @date 2024-03-19
  * @version 2.7
  * 
- * @change 2.7 - 改用软件SPI，支持自定义SCLK/MOSI引脚
+ * @change 2.7 - 改用硬件SPI，支持自定义SCLK/MOSI引脚，适配ESP32-S3不同引脚
  */
 
 #ifndef DISPLAY_H
@@ -65,7 +65,7 @@ struct SensorData {
  */
 class Display {
 private:
-    Ucglib_ST7735_18x128x160_SWSPI ucg; ///< Ucglib 对象(软件 SPI) - 支持自定义引脚
+    Ucglib_ST7735_18x128x160_HWSPI ucg; ///< Ucglib 对象(硬件 SPI) - 更快刷新
     ucg_t *ucg_ptr;                      ///< Ucglib 内部指针, 用于底层调用
     bool screenOn;                       ///< 背光状态:true=点亮
     unsigned long lastActivityTime;      ///< 上次活动时间(用于自动息屏)
@@ -89,14 +89,14 @@ private:
 
 public:
     /**
-     * @brief 构造函数 (软件 SPI - 支持自定义引脚)
+     * @brief 构造函数 (硬件 SPI - 支持自定义引脚)
      * @param sclk  SPI时钟引脚
      * @param mosi SPI数据引脚(MOSI/SDA)
      * @param cd    命令/数据引脚(DC/A0)
      * @param cs    片选引脚
      * @param reset 复位引脚
      * @param blPin 背光控制引脚
-     * @note 使用软件SPI可以自由定义引脚，兼容不同开发板
+     * @note ESP32 硬件SPI支持自定义引脚，这里使用SPI2
      */
     Display(uint8_t sclk, uint8_t mosi, uint8_t cd, uint8_t cs, uint8_t reset, uint8_t blPin);
 
