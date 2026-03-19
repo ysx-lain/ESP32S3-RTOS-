@@ -282,12 +282,11 @@ void display_task(void *pvParameters) {
             }
         }
 
-        // 检查自动息屏
-        static unsigned long lastCheck = 0;
-        unsigned long now = xTaskGetTickCount() * portTICK_PERIOD_MS;
-        if (display.isScreenOn() && (now - lastCheck > 1000)) {
-            lastCheck = now;
-            if (xSemaphoreTake(xDisplayMutex, pdMS_TO_TICKS(100))) {
+        // 只要屏幕亮着，说明系统在运行，更新活动时间
+        // 只有真·10秒无任何活动才会自动息屏
+        if (display.isScreenOn()) {
+            if (xSemaphoreTake(xDisplayMutex, pdMS_TO_TICKS(10))) {
+                display.updateActivity(); // 每次循环都更新，保证任何页面只要亮着就不算空闲
                 display.checkSleep(10000);
                 xSemaphoreGive(xDisplayMutex);
             }
