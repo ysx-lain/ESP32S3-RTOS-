@@ -39,6 +39,11 @@ bool Display::begin(uint8_t rotation) {
     // 使用成员变量 _blPin 控制背光
     pinMode(_blPin, OUTPUT);
     digitalWrite(_blPin, HIGH);  // 点亮背光
+    
+    // 测试：开机画一个白框，确认屏幕有反应
+    ucg_SetColor(ucg_ptr, 0, 255, 255, 255);
+    ucg_DrawBox(ucg_ptr, 2, 2, width()-4, height()-4);
+    delay(100);
 
     lastActivityTime = millis();
     screenOn = true;
