@@ -108,8 +108,9 @@ class ST7789v_arduino : public Adafruit_GFX {
 
  public:
 
-  ST7789v_arduino(int8_t DC, int8_t RST, int8_t SID, int8_t SCLK, int8_t CS = -1);
-  ST7789v_arduino(int8_t DC, int8_t RST, int8_t CS = -1);
+  ST7789v_arduino(int8_t DC, int8_t RST, int8_t SID, int8_t SCLK, int8_t CS = -1);    // 软件SPI，自定义全部引脚
+  ST7789v_arduino(int8_t DC, int8_t RST, int8_t CS = -1);                          // 硬件SPI，默认引脚
+  ST7789v_arduino(int8_t SID, int8_t SCLK, int8_t DC, int8_t RST, int8_t CS = -1); // 硬件SPI，自定义MOSI/SCK引脚
 
   void     setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1),
            pushColor(uint16_t color),
