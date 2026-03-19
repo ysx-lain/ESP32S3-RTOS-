@@ -371,7 +371,13 @@ void ble_task(void *pvParameters) {
         // 等待传感器数据队列新来的数据
         if (xQueueReceive(xSensorDataQueue, &reading, pdMS_TO_TICKS(INTERVAL_BLE))) {
             // 如果BLE已连接，发送数据
-            BLEManager::updateSensorData(reading);
+            // 格式化为JSON字符串发送
+            char json[128];
+            snprintf(json, sizeof(json), 
+                "{\"temp\":%.1f,\"hum\":%.1f,\"press\":%.1f,\"co2\":%d,\"ozone\":%.1f,\"acetaldehyde\":%.2f,\"ethylene\":%.2f}",
+                reading.temperature, reading.humidity, reading.pressure, 
+                reading.co2, reading.ozone, reading.acetaldehyde, reading.ethylene);
+            BLEManager::sendSensorData(json);
         }
     }
 
