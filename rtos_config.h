@@ -103,8 +103,18 @@ void ble_task(void *pvParameters);
 
 // ==================== 硬件引脚定义 ====================
 // 如果主程序没有定义, 这里提供默认定义
-#ifndef BUTTON_PIN
-#define BUTTON_PIN 2
+// 三个按键:
+// - BUTTON_PIN_PAGE: 切换页面
+// - BUTTON_PIN_SCROLL_UP: 向上滚动
+// - BUTTON_PIN_SCROLL_DOWN: 向下滚动
+#ifndef BUTTON_PIN_PAGE
+#define BUTTON_PIN_PAGE 2
+#endif
+#ifndef BUTTON_PIN_SCROLL_UP
+#define BUTTON_PIN_SCROLL_UP 3
+#endif
+#ifndef BUTTON_PIN_SCROLL_DOWN
+#define BUTTON_PIN_SCROLL_DOWN 4
 #endif
 #ifndef BL_PIN
 #define BL_PIN     12

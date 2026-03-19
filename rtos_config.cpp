@@ -38,61 +38,97 @@ extern int currentPage;
 extern void page1();
 extern void page2();
 extern void page3();
+extern void page1_update();
 extern void refreshTimeDisplay();
 extern unsigned long lastButtonPress;
 extern const int PAGE_COUNT;
-// 引脚定义已经在 rtos_config.h 中提供
+
+// ==================== 滚动相关 ====================
+// 针对80px高度屏幕，内容放不下，支持按键滚动
+int scrollOffset = 0;
+const int scrollStep = 10;      // 每次滚动10像素
+const int maxScrollOffset = 80; // 最大滚动不超过屏幕高度
 
 // ==================== 常量定义 ====================
 const unsigned long debounceTime = 200;  // 按键消抖时间(毫秒)
 
 // ==================== 按键扫描任务 ====================
-// 短按 → 下滚一行，长按 → 上滚一行
+// 三个独立按键，分别功能:
+//  - BUTTON_PIN_PAGE → 切换页面
+//  - BUTTON_PIN_SCROLL_UP → 向上滚动
+//  - BUTTON_PIN_SCROLL_DOWN → 向下滚动
 void button_task(void *pvParameters) {
-    const int buttonPin = BUTTON_PIN;
-    pinMode(buttonPin, INPUT_PULLUP);
-    int lastButtonState = HIGH;
-    unsigned long pressStartTime = 0;
+    // 初始化：读取初始状态
+    int lastStatePage = digitalRead(BUTTON_PIN_PAGE);
+    int lastStateUp = digitalRead(BUTTON_PIN_SCROLL_UP);
+    int lastStateDown = digitalRead(BUTTON_PIN_SCROLL_DOWN);
+
+    // 设置引脚模式：输入上拉
+    pinMode(BUTTON_PIN_PAGE, INPUT_PULLUP);
+    pinMode(BUTTON_PIN_SCROLL_UP, INPUT_PULLUP);
+    pinMode(BUTTON_PIN_SCROLL_DOWN, INPUT_PULLUP);
 
     for (;;) { // 任务主循环
-        int buttonState = digitalRead(buttonPin);
-
-        // 检测按键按下(下降沿)
-        if (buttonState == LOW && lastButtonState == HIGH) {
-            pressStartTime = xTaskGetTickCount() * portTICK_PERIOD_MS;
-        }
-
-        // 检测按键释放(上升沿)
-        if (buttonState == HIGH && lastButtonState == LOW) {
+        // 1. 检测页面切换按键（下降沿）
+        int buttonStatePage = digitalRead(BUTTON_PIN_PAGE);
+        if (buttonStatePage == LOW && lastStatePage == HIGH) {
             unsigned long now = xTaskGetTickCount() * portTICK_PERIOD_MS;
-            unsigned long duration = now - pressStartTime;
-
-            // 消抖检测
-            if (duration < debounceTime) {
-                // 噪音，忽略
-                lastButtonState = buttonState;
-                vTaskDelay(pdMS_TO_TICKS(INTERVAL_BUTTON));
-                continue;
+            if (now - lastButtonPress > debounceTime) {
+                lastButtonPress = now;
+                // 发送页面切换事件：isLongPress = false 表示切换页面
+                ButtonEvent_t event;
+                event.timestamp = now;
+                event.isLongPress = false; // false = 切换页面
+                xQueueSend(xButtonEventQueue, &event, 0);
             }
-
-            lastButtonPress = now;
-
-            // 发送按键事件到显示任务
-            ButtonEvent_t event;
-            event.timestamp = now;
-            event.isLongPress = (duration >= 500); // 大于500ms算长按
-
-            // 非阻塞发送, 如果队列满就丢弃(不等待)
-            xQueueSend(xButtonEventQueue, &event, 0);
         }
+        lastStatePage = buttonStatePage;
 
-        lastButtonState = buttonState;
+        // 2. 检测向上滚动按键（下降沿）
+        int buttonStateUp = digitalRead(BUTTON_PIN_SCROLL_UP);
+        if (buttonStateUp == LOW && lastStateUp == HIGH) {
+            unsigned long now = xTaskGetTickCount() * portTICK_PERIOD_MS;
+            if (now - lastButtonPress > debounceTime) {
+                lastButtonPress = now;
+                // 向上滚动：直接修改偏移，发送重绘事件
+                if (scrollOffset > 0) {
+                    scrollOffset -= scrollStep;
+                    if (scrollOffset < 0) scrollOffset = 0;
+                    // 发送事件触发重绘
+                    ButtonEvent_t event;
+                    event.timestamp = now;
+                    event.isLongPress = true; // true = 向上滚动
+                    xQueueSend(xButtonEventQueue, &event, 0);
+                }
+            }
+        }
+        lastStateUp = buttonStateUp;
 
-        // 延时, 让出CPU
+        // 3. 检测向下滚动按键（下降沿）
+        int buttonStateDown = digitalRead(BUTTON_PIN_SCROLL_DOWN);
+        if (buttonStateDown == LOW && lastStateDown == HIGH) {
+            unsigned long now = xTaskGetTickCount() * portTICK_PERIOD_MS;
+            if (now - lastButtonPress > debounceTime) {
+                lastButtonPress = now;
+                // 向下滚动：直接修改偏移，发送重绘事件
+                if (scrollOffset < maxScrollOffset) {
+                    scrollOffset += scrollStep;
+                    if (scrollOffset > maxScrollOffset) scrollOffset = maxScrollOffset;
+                    // 发送事件触发重绘
+                    ButtonEvent_t event;
+                    event.timestamp = now;
+                    event.isLongPress = false; // 复用isLongPress = false 表示向下滚动
+                    xQueueSend(xButtonEventQueue, &event, 0);
+                }
+            }
+        }
+        lastStateDown = buttonStateDown;
+
+        // 延时，让出CPU
         vTaskDelay(pdMS_TO_TICKS(INTERVAL_BUTTON));
     }
 
-    // 不会走到这里, 如果退出要删除自己
+    // 不会走到这里，如果退出要删除自己
     vTaskDelete(nullptr);
 }
 
@@ -109,7 +145,7 @@ void clock_task(void *pvParameters) {
             if (currentMinute != lastMinute) {
                 lastMinute = currentMinute;
 
-                // 获取显示互斥锁, 更新时间显示
+                // 获取显示互斥锁，更新时间显示
                 if (xSemaphoreTake(xDisplayMutex, pdMS_TO_TICKS(100))) {
                     refreshTimeDisplay();
                     xSemaphoreGive(xDisplayMutex);
@@ -214,12 +250,6 @@ void sensor_task(void *pvParameters) {
 // 显示任务需要直接读取最新数据来刷新
 SensorReading_t latestSensorReading;
 
-// ==================== 滚动相关 ====================
-// 针对80px高度屏幕，内容放不下，支持按键滚动
-int scrollOffset = 0;
-const int scrollStep = 10;      // 每次滚动10像素
-const int maxScrollOffset = 80; // 最大滚动不超过屏幕高度
-
 // ==================== 显示更新任务 ====================
 void display_task(void *pvParameters) {
     // 初始化最新传感器数据为默认值
@@ -251,7 +281,7 @@ void display_task(void *pvParameters) {
         bool haveEvent = xQueueReceive(xButtonEventQueue, &event, pdMS_TO_TICKS(10));
 
         if (haveEvent) {
-            // 收到按键事件, 处理它
+            // 收到按键事件，处理它
             bool wasScreenOff = !display.isScreenOn();
 
             // 更新活动时间(用于自动息屏)
@@ -259,7 +289,7 @@ void display_task(void *pvParameters) {
                 display.updateActivity();
 
                 if (wasScreenOff) {
-                    // 唤醒屏幕, 重绘当前页面
+                    // 唤醒屏幕，重绘当前页面
                     display.wake();
                     scrollOffset = 0; // 唤醒重置滚动
                     display.clear();
@@ -271,23 +301,27 @@ void display_task(void *pvParameters) {
                         page3();
                     }
                     Serial.println("Screen woken up");
-                } else {
-                    // 短按 = 下滚，长按 = 上滚
-                    if (event.isLongPress) {
-                        // 上滚
-                        if (scrollOffset > 0) {
-                            scrollOffset -= scrollStep;
-                            if (scrollOffset < 0) scrollOffset = 0;
+                } 
+                else {
+                    // 区分事件：
+                    // - event.isLongPress = true  → 向上滚动
+                    // - event.isLongPress = false → 
+                    //   如果是原来的页面切换 → 现在改为：false = 向下滚动
+                    if (!event.isLongPress) {
+                        // 现在：false 两种情况：
+                        // 1. 原来的页面切换 → 现在三个按键独立，所以：
+                        //  - 页面切换按键按下 → 切换页面
+                        //  - 向下滚动按键按下 → 滚动已经改了偏移，直接重绘
+                        if (scrollOffset == 0 && event.isLongPress == false) {
+                            // 是页面切换按键，切换页面
+                            currentPage = (currentPage + 1) % PAGE_COUNT;
+                            scrollOffset = 0; // 切换页面重置滚动偏移
                         }
-                    } else {
-                        // 下滚
-                        if (scrollOffset < maxScrollOffset) {
-                            scrollOffset += scrollStep;
-                            if (scrollOffset > maxScrollOffset) scrollOffset = maxScrollOffset;
-                        }
+                        // else 就是向下滚动，已经改了偏移，不用操作
                     }
-                    // 滚动完重绘当前页面，应用新偏移
-                    Serial.printf("Scroll offset: %d\r\n", scrollOffset);
+                    // else 就是向上滚动，滚动已经改了偏移，不用操作
+
+                    // 不管是什么事件，都重绘当前页面
                     display.clear();
                     if (currentPage == 0) {
                         page1();
@@ -296,6 +330,7 @@ void display_task(void *pvParameters) {
                     } else {
                         page3();
                     }
+                    Serial.printf("currentPage: %d, scrollOffset: %d\r\n", currentPage, scrollOffset);
                 }
 
                 xSemaphoreGive(xDisplayMutex);
@@ -314,8 +349,8 @@ void display_task(void *pvParameters) {
             }
         }
 
-        // 只要屏幕亮着，说明系统在运行，更新活动时间
-        // 只有真·10秒无任何活动才会自动息屏
+        // 只要屏幕亮着，说明系统在运行，更新活动时间，只有真·空闲才息屏
+        // 现在自动息屏已经禁用，这段保留不影响
         if (display.isScreenOn()) {
             if (xSemaphoreTake(xDisplayMutex, pdMS_TO_TICKS(10))) {
                 display.updateActivity(); // 每次循环都更新，保证任何页面只要亮着就不算空闲
@@ -330,80 +365,38 @@ void display_task(void *pvParameters) {
 
 // ==================== BLE 通信任务 ====================
 void ble_task(void *pvParameters) {
-    // BLE 已经在 setup 中初始化, 这里只需要定期发送数据
-    SensorReading_t lastReading;
-    memset(&lastReading, 0, sizeof(lastReading));
-    bool hasReceivedData = false;
+    SensorReading_t reading;
 
     for (;;) {
-        // 检查是否有新的传感器数据
-        if (BLEManager::isConnected()) {
-            // 尝试从队列读取最新的传感器数据(非阻塞)
-            // 持续读取直到队列为空, 保留最新的一个
-            while (xQueueReceive(xSensorDataQueue, &lastReading, 0)) {
-                // 循环读取, 最后一个就是最新的
-                hasReceivedData = true;
-            }
-
-            // 发送数据到 BLE 客户端(二进制格式, 带时间戳)
-            // 这样从机可以直接解析结构体, 保证数据同步
-            if (hasReceivedData) {
-                // 更新时间戳为当前发送时间
-                lastReading.timestamp = millis();
-                size_t bytesSent = sizeof(lastReading);
-                BLEManager::sendSensorData((uint8_t*)&lastReading, bytesSent);
-                Serial.printf("[BLE-TX] struct size: %zu bytes, temp=%.1f hum=%.1f press=%.1f co2=%d ozone=%.1f acetaldehyde=%.1f ethylene=%.2f\n",
-                           bytesSent,
-                           lastReading.temperature,
-                           lastReading.humidity,
-                           lastReading.pressure,
-                           lastReading.co2,
-                           lastReading.ozone,
-                           lastReading.acetaldehyde,
-                           lastReading.ethylene);
-            }
-        } else {
-            // 断开连接时, 让 BLE 栈做维护工作
-            BLEManager::update();
-            hasReceivedData = false;
+        // 等待传感器数据队列新来的数据
+        if (xQueueReceive(xSensorDataQueue, &reading, pdMS_TO_TICKS(INTERVAL_BLE))) {
+            // 如果BLE已连接，发送数据
+            BLEManager::updateSensorData(reading);
         }
-
-        vTaskDelay(pdMS_TO_TICKS(INTERVAL_BLE));
     }
 
     vTaskDelete(nullptr);
 }
 
-// ==================== RTOS 初始化 ====================
-void rtos_init(void) {
-    // 创建互斥锁
+// ==================== 初始化: 创建所有 FreeRTOS 对象 ====================
+void rtos_init() {
+    //  创建互斥锁：保护显示设备
     xDisplayMutex = xSemaphoreCreateMutex();
+    // 创建互斥锁：保护传感器数据
     xSensorDataMutex = xSemaphoreCreateMutex();
 
-    // 创建队列
-    // 按键事件队列:长度 5 足够, 因为按键不会太快
+    // 创建按键事件队列：长度为 5，足够存放多个按键事件
     xButtonEventQueue = xQueueCreate(5, sizeof(ButtonEvent_t));
-    // 传感器数据队列:长度 8 足够缓冲
-    xSensorDataQueue = xQueueCreate(8, sizeof(SensorReading_t));
+    // 创建传感器数据队列：长度为 5，足够存放多个传感器读数
+    xSensorDataQueue = xQueueCreate(5, sizeof(SensorReading_t));
 
-    // 创建各个任务
-    // Arduino 核心已经在 Core 0 运行, 我们把任务都创建到 Core 1
-    // 如果你想让某个任务在 Core 0 运行, 就把最后一个参数改成 0
-    xTaskCreatePinnedToCore(button_task, "Button", TASK_STACK_BUTTON, nullptr,
-                            TASK_PRIORITY_BUTTON, &xButtonTaskHandle, 1);
+    // 创建所有任务
+    xTaskCreate(button_task,     "button_task",     TASK_STACK_BUTTON,     nullptr, TASK_PRIORITY_BUTTON,     &xButtonTaskHandle);
+    xTaskCreate(clock_task,      "clock_task",      TASK_STACK_CLOCK,      nullptr, TASK_PRIORITY_CLOCK,      &xClockTaskHandle);
+    xTaskCreate(sensor_task,     "sensor_task",     TASK_STACK_SENSOR,     nullptr, TASK_PRIORITY_SENSOR,     &xSensorTaskHandle);
+    xTaskCreate(display_task,    "display_task",    TASK_STACK_DISPLAY,    nullptr, TASK_PRIORITY_DISPLAY,    &xDisplayTaskHandle);
+    xTaskCreate(ble_task,       "ble_task",       TASK_STACK_BLE,       nullptr, TASK_PRIORITY_BLE,       &xBLETaskHandle);
 
-    xTaskCreatePinnedToCore(clock_task, "Clock", TASK_STACK_CLOCK, nullptr,
-                            TASK_PRIORITY_CLOCK, &xClockTaskHandle, 1);
-
-    xTaskCreatePinnedToCore(sensor_task, "Sensor", TASK_STACK_SENSOR, nullptr,
-                            TASK_PRIORITY_SENSOR, &xSensorTaskHandle, 1);
-
-    xTaskCreatePinnedToCore(display_task, "Display", TASK_STACK_DISPLAY, nullptr,
-                            TASK_PRIORITY_DISPLAY, &xDisplayTaskHandle, 1);
-
-    // BLE 任务默认启用
-    xTaskCreatePinnedToCore(ble_task, "BLE", TASK_STACK_BLE, nullptr,
-                            TASK_PRIORITY_BLE, &xBLETaskHandle, 1);
-
-    Serial.println("All FreeRTOS tasks created");
+    // 任务创建完就自动启动，不需要额外操作
+    Serial.println("[RTOS] All tasks created successfully");
 }
