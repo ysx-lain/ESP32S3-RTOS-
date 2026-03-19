@@ -12,18 +12,23 @@
 
 #include "Display.h"
 
-// 构造函数:初始化 Ucglib 对象(软件 SPI), 保存背光引脚
-// Ucglib硬件SPI只接受3个参数，自定义引脚必须使用软件SPI
+// 构造函数:保存引脚，用HWSPI构造(只需要cd/cs/reset)
+// 我们会在begin()中提前自定义SPI引脚再初始化
 Display::Display(uint8_t sclk, uint8_t mosi, uint8_t cd, uint8_t cs, uint8_t reset, uint8_t blPin)
-    : ucg(sclk, mosi, cd, cs, reset), 
+    : ucg(cd, cs, reset), 
       screenOn(false), 
       lastActivityTime(0), 
       _initialized(false),
-      _blPin(blPin) {
-    // 软件SPI支持自定义任意引脚，正好适配你的ESP32-S3引脚分配
+      _blPin(blPin),
+      _sclk(sclk), _mosi(mosi) {
+    // 先保存自定义引脚，在begin()中提前初始化SPI
 }
 
 bool Display::begin(uint8_t rotation) {
+    // 提前初始化SPI，使用我们自定义的引脚
+    // ESP32硬件SPI支持任意引脚，所以这里提前设置
+    SPI.begin(_sclk, -1, _mosi, -1);  // miso不用，cs由ucglib控制
+    
     ucg.begin(UCG_FONT_MODE_TRANSPARENT);
     if (rotation == 1) ucg.setRotate90();
     else if (rotation == 2) ucg.setRotate180();

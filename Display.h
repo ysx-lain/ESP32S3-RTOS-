@@ -65,12 +65,13 @@ struct SensorData {
  */
 class Display {
 private:
-    Ucglib_ST7735_18x128x160_SWSPI ucg; ///< Ucglib 对象(软件 SPI) - 支持自定义引脚
+    Ucglib_ST7735_18x128x160_HWSPI ucg; ///< Ucglib 对象(硬件 SPI) - 更快刷新
     ucg_t *ucg_ptr;                      ///< Ucglib 内部指针, 用于底层调用
     bool screenOn;                       ///< 背光状态:true=点亮
     unsigned long lastActivityTime;      ///< 上次活动时间(用于自动息屏)
     bool _initialized;                   ///< 硬件初始化成功标志(状态检测用)
     uint8_t _blPin;                      ///< 背光控制引脚
+    uint8_t _sclk, _mosi;                ///< 保存自定义SPI引脚，在begin()中初始化
 
     /**
      * @brief 根据字体枚举获取 Ucglib 字体指针
@@ -89,16 +90,19 @@ private:
 
 public:
     /**
-     * @brief 构造函数 (软件 SPI - 支持自定义引脚)
+     * @brief 构造函数 (硬件 SPI - ESP32自定义引脚方案)
      * @param sclk  SPI时钟引脚
      * @param mosi SPI数据引脚(MOSI/SDA)
      * @param cd    命令/数据引脚(DC/A0)
      * @param cs    片选引脚
      * @param reset 复位引脚
      * @param blPin 背光控制引脚
-     * @note Ucglib硬件SPI只支持默认引脚，自定义引脚必须用软件SPI
+     * @note 提前调用SPI.begin()自定义引脚，再进入Ucglib初始化，实现硬件SPI自定义引脚
      */
     Display(uint8_t sclk, uint8_t mosi, uint8_t cd, uint8_t cs, uint8_t reset, uint8_t blPin);
+
+private:
+    uint8_t _sclk, _mosi;  // 保存自定义SPI引脚，在begin()中初始化
 
     /**
      * @brief 初始化屏幕, 设置旋转并点亮背光
