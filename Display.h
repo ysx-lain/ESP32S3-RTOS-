@@ -65,7 +65,7 @@ struct SensorData {
  */
 class Display {
 private:
-    Ucglib_ST7735_18x128x160_SWSPI ucg; ///< Ucglib 对象(软件 SPI) - 支持自定义任意引脚
+    Ucglib_ST7735_18x80x160_SWSPI ucg; ///< Ucglib 对象(软件 SPI) - 80x160 正确分辨率，支持自定义任意引脚
     ucg_t *ucg_ptr;                      ///< Ucglib 内部指针, 用于底层调用
     bool screenOn;                       ///< 背光状态:true=点亮
     unsigned long lastActivityTime;      ///< 上次活动时间(用于自动息屏)
