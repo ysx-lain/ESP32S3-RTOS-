@@ -46,18 +46,18 @@
 #include "ble.h"      // BLE 模块已启用
 
 // ==================== 硬件引脚定义 ====================
-// 硬件 SPI 使用 ESP32S3 默认硬件 SPI 引脚，不可修改:
-//  SCLK = GPIO18
-//  MOSI = GPIO23
-#define BUTTON_PIN 2
-#define BL_PIN     12
-#define DC_PIN     9    // 命令/数据
+// 软件 SPI - 自定义引脚 (ESP32S3 SPI2)
+#define SCLK_PIN   12   // SPI时钟
+#define MOSI_PIN   11   // SPI数据(MOSI/SDA)
+#define BUTTON_PIN  2
+#define BL_PIN     12   // 背光
+#define DC_PIN      9   // 命令/数据
 #define CS_PIN     10   // 片选
-#define RESET_PIN  8    // 复位
+#define RESET_PIN   8   // 复位
 
 // ==================== 全局对象 ====================
-// 硬件 SPI 构造函数: Display(dc, cs, reset, blPin)
-Display display(DC_PIN, CS_PIN, RESET_PIN, BL_PIN);
+// 软件 SPI 构造函数: Display(sclk, mosi, dc, cs, reset, blPin)
+Display display(SCLK_PIN, MOSI_PIN, DC_PIN, CS_PIN, RESET_PIN, BL_PIN);
 
 // ==================== 页面管理 ====================
 const int PAGE_COUNT = 3;

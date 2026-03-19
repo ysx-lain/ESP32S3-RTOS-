@@ -6,8 +6,10 @@
  * 自动息屏等功能. 针对 80x160 分辨率并旋转 90° 为 160x80 横屏优化. 
  * 
  * @author ysx
- * @date 2024-03-02
- * @version 2.6
+ * @date 2024-03-19
+ * @version 2.7
+ * 
+ * @change 2.7 - 改用软件SPI，支持自定义SCLK/MOSI引脚
  */
 
 #ifndef DISPLAY_H
@@ -63,12 +65,12 @@ struct SensorData {
  */
 class Display {
 private:
-    Ucglib_ST7735_18x128x160_HWSPI ucg; ///< Ucglib 对象(硬件 SPI) - 更快刷新
+    Ucglib_ST7735_18x128x160_SWSPI ucg; ///< Ucglib 对象(软件 SPI) - 支持自定义引脚
     ucg_t *ucg_ptr;                      ///< Ucglib 内部指针, 用于底层调用
     bool screenOn;                       ///< 背光状态:true=点亮
     unsigned long lastActivityTime;      ///< 上次活动时间(用于自动息屏)
     bool _initialized;                   ///< 硬件初始化成功标志(状态检测用)
-    uint8_t _blPin;                       ///< 背光控制引脚
+    uint8_t _blPin;                      ///< 背光控制引脚
 
     /**
      * @brief 根据字体枚举获取 Ucglib 字体指针
@@ -87,14 +89,16 @@ private:
 
 public:
     /**
-     * @brief 构造函数 (硬件 SPI)
+     * @brief 构造函数 (软件 SPI - 支持自定义引脚)
+     * @param sclk  SPI时钟引脚
+     * @param mosi SPI数据引脚(MOSI/SDA)
      * @param cd    命令/数据引脚(DC/A0)
      * @param cs    片选引脚
      * @param reset 复位引脚
      * @param blPin 背光控制引脚
-     * @note ESP32 硬件SPI固定引脚: SCLK=GPIO18, MOSI=GPIO23
+     * @note 使用软件SPI可以自由定义引脚，兼容不同开发板
      */
-    Display(uint8_t cd, uint8_t cs, uint8_t reset, uint8_t blPin);
+    Display(uint8_t sclk, uint8_t mosi, uint8_t cd, uint8_t cs, uint8_t reset, uint8_t blPin);
 
     /**
      * @brief 初始化屏幕, 设置旋转并点亮背光
